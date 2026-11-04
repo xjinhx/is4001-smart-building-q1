@@ -1,9 +1,10 @@
-# Raw CU-BEMS data (about 700 MB)
-/20*Floor*.csv
+# Raw CU-BEMS data: Floors 3-7 are pushed, Floors 1-2 are not used by the project
+/20*Floor1.csv
+/20*Floor2.csv
 
-# Haritha's package: shared separately
-/IS4001_Q1_Haritha/
-/IS4001_Q1_Haritha.zip
+# macOS
+.DS_Store
+**/.DS_Store
 
 __pycache__/
 *.pyc
