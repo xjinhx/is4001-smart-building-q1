@@ -1,0 +1,41 @@
+export type Zone = { floor: number; zone: number; rated_kW: number; sensor: boolean }
+export type Day = { date: string; label: string; month: string; peak: number; month_peak: boolean; readings: number; sunrise: number; sunset: number }
+export type Schedule = {
+  id: string; label: string; offsets: number[]; cut_2018: number; ci: [number, number]
+  comfort_2018: number; comfort_2019: number; vs_rule: number | null; vs_rule_ci: [number, number] | null
+  kwh_steady: number; outside_pct: number | null
+}
+export type Init = {
+  days: Day[]; default_date: string; schedules: Schedule[]; replay_from: number; replay_to: number; zones: Zone[]
+  demand_baht_per_kW: number; start_range: [number, number]
+}
+export type Conditions = { outdoor_delta_C: number; indoor_delta_C: number; load_delta_pct: number }
+export type LogRow = { floor: number; zone: number; offset: number; today_min: number; new_min: number }
+export type Result = {
+  date: string; offsets: number[]; bins: number[]
+  curve_actual: number[]; curve_today: number[]; curve_schedule: number[]
+  morning_peak: number; morning_peak_bin: number
+  peak_today: number; peak_schedule: number; peak_bin_today: number; peak_bin_schedule: number
+  peak_elsewhere_kW: number; peak_floor_binds: boolean
+  month: string; month_peak_today: number; month_peak_schedule: number; baht_month: number
+  holdout_avg_cut: number; cut_2019: number; kwh_steady: number; kwh_model: number
+  comfort_day: { readings: number; today: number; schedule: number }
+  comfort_holdout: { today: number; schedule: number }
+  at_risk: { floor: number; zone: number; today_C: number; new_C: number }[]
+  log: LogRow[]; starts_outside_range: number; no_sensor_delayed: { floor: number; zone: number }[]
+  minutes_today: number[][]; minutes_schedule: number[][]; other_minutes: number[]
+  conditions_used: { outdoor_C: number; indoor_C: number | null; load_kW: number } | null
+}
+export type Yearly = {
+  outdoor_delta_C: number; cut: number; cut_lo: number; cut_hi: number; baht: number; baht_lo: number; baht_hi: number
+  months: { month: string; today: number; schedule: number }[]; comfort_today: number; comfort_schedule: number; rate: number
+}
+
+export const clock = (m: number) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`
+export const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : '0')
+export const fmt = (n: number, d = 0) => n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d })
+export const post = async <T,>(path: string, body: unknown): Promise<T> => {
+  const res = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+  if (!res.ok) throw new Error(`The backend returned ${res.status}`)
+  return res.json()
+}
