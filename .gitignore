@@ -7,3 +7,6 @@
 
 __pycache__/
 *.pyc
+
+# Local preview config and the unslop skill copy (credited in ml_startup/README.md)
+/.claude/

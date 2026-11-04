@@ -12,7 +12,21 @@ The data isn't in this repo. After cloning, put these in the repo root:
 Then rebuild everything (about 5 minutes):
 
 ```bash
-pip install xgboost pandas numpy pyarrow matplotlib scikit-learn
+pip install xgboost pandas numpy pyarrow matplotlib scikit-learn fastapi uvicorn
 cd ml_startup
 python run_all.py
 ```
+
+## Run the what-if console
+
+Needs Node 22 for the first build. From `ml_startup`:
+
+```bash
+cd app/web
+npm install
+npx vite build
+cd ../..
+python app/api.py
+```
+
+Then open http://127.0.0.1:8000. The first start takes a little longer because it fits and saves the models. See [ml_startup/README.md](ml_startup/README.md#what-if-console) for what it shows and how far to trust it.

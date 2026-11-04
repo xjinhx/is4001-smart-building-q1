@@ -51,6 +51,33 @@ Design choices:
 
 Leave-one-month-out CV on 2019 compared 12 variants (`results/variant_cv.csv`), refitting models each fold. The pick was fixed before scoring 2018: the top CV variant that meets all constraints (31.8 kW; rule 32.0 kW). Offsets are {−10, −5, 0, +5, +10} min per zone. Constraints: comfort share no lower than today, and kWh not higher on both the rule and model estimates. `sim.py` reproduces `stagger_monthly.csv` to within 0.01 kW, and `rule_search` reproduces Haritha's schedule exactly.
 
+## What-if console
+
+`app/` is a local web app for the presentation: a mock BMS that replays real 2018 holdout days on a stylised 3D model of the building. It isn't connected to the building. Setup is in the [root README](../README.md#run-the-what-if-console).
+
+| Page | Question | What it does |
+|---|---|---|
+| Replay | What happens when the AC restarts? | Plays a full day from 06:00 to 19:30, today or with a schedule, with the 15-minute load curve below |
+| Schedules | Which schedule should we use? | Compares saved schedules on peak cut, comfort and kWh, and shows each one's zone offsets |
+| What if | What if we change something? | Edits zone offsets, moves the temperature and load sliders, or suggests a schedule for one day |
+| Yearly value | What is it worth over a year? | Projects the monthly cut to baht a year, as in 2018 or with outdoor temp raised 1 or 2°C |
+
+How far to trust each number:
+
+| On screen | Source | Trust |
+|---|---|---|
+| Named schedules, no what-if inputs | Real curves time-shifted, same as `sim.py` and `results/` | Same limits as the results above |
+| Hand-edited or suggested schedule, all-2018 figures | Same simulator, but the schedule was chosen on a 2018 day | Not holdout results. The page shows the 2019 cut as the fairer test |
+| Any slider moved | Replay + the model's estimated change, for that day only | Weaker. Inputs are clipped to the 2019 P1-P99 range, and the indoor slider has no effect on days with no readings |
+| Yearly value | Monthly cut × 132.93 baht × 12 | Assumes July to December 2018 holds all year, and Floors 3 to 7 are only part of the meter |
+| Hotter scenarios | Model's change added across all 2018 days | Weak. The kW and comfort models respond little to outdoor temp, and the hottest days are clipped, so a small change doesn't show the building is safe in a hotter year |
+
+Still simulated throughout: zones are treated as independent. Zone shapes on the 3D model and 2D view are traced by eye from Fig. 2 of the [CU-BEMS paper](https://doi.org/10.1038/s41597-020-00582-3), which is licensed under CC BY 4.0. The paper gives no compass direction, so which way the plan faces on the model is assumed. The building is a simplified model, not a survey. Offsets only change 11:30 to 15:30, so the rest of the replay is as recorded. The page opens on the monthly-peak day closest to the 2018 average cut, not the best-looking one.
+
+The sky on the Replay page is a time-of-day cue only, and changes no figures. Its sunrise and sunset times (`app/sun_times_2018.csv`) come from [Open-Meteo](https://open-meteo.com/), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+
+The screen was designed using [unslop](https://github.com/heydamir/unslop) by Damir Sokolovsky ([@heydamir](https://x.com/heydamir)), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). No unslop code runs in the app. The local copy of the skill isn't committed.
+
 ## Limits to say out loud
 
 1. **Nobody has run a staggered start here.** Zones on a floor start within about 3 min of each other, so all savings are simulated. Zones are assumed independent. Recommend a pilot before quoting baht.
@@ -84,5 +111,6 @@ Use `sim.bootstrap_cut` for ranges (same resampling as `stagger.py`). The best f
 | `sim.py` | `stagger.py`'s simulator, checked against published numbers |
 | `models.py`, `validate.py` | Training tables and models; holdout, unseen-floor and SHAP checks |
 | `optimiser.py`, `select_variant.py`, `run_schedule.py` | Optimiser and API; 2019 CV; final scoring |
-| `charts.py`, `knime/` | Slide charts `charts/ml_01–05`; KNIME node code and setup |
+| `charts.py`, `knime/` | Slide charts `charts/ml_01–05`; KNIME node code and setup (no longer presented) |
+| `app/` | What-if console: `api.py` backend, `web/` React and Three.js frontend |
 | `results/ml_schedule.csv`, `ml_monthly.csv`, `ml_bootstrap.csv` | Same formats as `stagger_*.csv` |
