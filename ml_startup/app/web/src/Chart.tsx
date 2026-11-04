@@ -47,31 +47,31 @@ export default function Chart({ r, minute, onSeek, from, to }: {
       onClick={(e) => { const m = fromEvent(e); if (onSeek && m >= t0 && m < t1) onSeek(m) }}
     >
       <svg width={w} height={h} role="img" aria-label={`Building load: billed peak ${fmt(r.peak_today)} kW today, ${fmt(r.peak_schedule)} kW with this schedule`}>
-        {pi >= 0 && <rect x={X(r.peak_bin_schedule)} y={T} width={X(r.peak_bin_schedule + 15) - X(r.peak_bin_schedule)} height={h - T - B} fill="var(--heat)" opacity={0.25} />}
+        {pi >= 0 && <rect x={X(r.peak_bin_schedule)} y={T} width={X(r.peak_bin_schedule + 15) - X(r.peak_bin_schedule)} height={h - T - B} fill="#f2ad45" opacity={0.12} />}
         {yT.map((v) => (
           <g key={v}>
-            <line x1={L} x2={w - R} y1={Y(v)} y2={Y(v)} stroke="var(--line)" />
+            <line x1={L} x2={w - R} y1={Y(v)} y2={Y(v)} stroke="rgba(237,237,237,.08)" />
             <text x={L - 8} y={Y(v) + 4} textAnchor="end" className="tick">{fmt(v)}</text>
           </g>
         ))}
         {showBilling && (
           <g>
-            <line x1={X(BILLING_START)} x2={X(BILLING_START)} y1={T - 12} y2={h - B} stroke="var(--line-2)" strokeDasharray="3 3" />
+            <line x1={X(BILLING_START)} x2={X(BILLING_START)} y1={T - 12} y2={h - B} stroke="rgba(237,237,237,.28)" strokeDasharray="3 3" />
             <text x={X(BILLING_START) + 6} y={T - 4} className="tick">Billing starts 9:00</text>
             {mi >= 0 && <text x={X(BILLING_START) - 6} y={T - 4} textAnchor="end" className="tick">Morning start {fmt(r.morning_peak)} kW, not billed</text>}
           </g>
         )}
-        {bins.map((b) => <line key={b} x1={X(b)} x2={X(b)} y1={h - B} y2={h - B + (b % 60 === 0 ? 8 : 4)} stroke="var(--line-2)" />)}
+        {bins.map((b) => <line key={b} x1={X(b)} x2={X(b)} y1={h - B} y2={h - B + (b % 60 === 0 ? 8 : 4)} stroke="rgba(237,237,237,.28)" />)}
         {bins.filter((b) => b % labelEvery === 0).map((b) => <text key={b} x={X(b)} y={h - B + 22} textAnchor="middle" className="tick">{clock(b)}</text>)}
-        <path d={line(today)} fill="none" stroke="var(--text-3)" strokeWidth={1.5} />
-        <path d={line(sched)} fill="none" stroke="var(--accent)" strokeWidth={2} />
-        {minute !== undefined && minute >= t0 && minute < t1 && <line x1={X(minute)} x2={X(minute)} y1={T} y2={h - B} stroke="var(--text)" />}
-        {pi >= 0 && <circle cx={X(bins[pi] + 7.5)} cy={Y(sched[pi])} r={4} fill="var(--accent)" />}
+        <path d={line(today)} fill="none" stroke="#85858b" strokeWidth={1.5} />
+        <path d={line(sched)} fill="none" stroke="#f2ad45" strokeWidth={2} />
+        {minute !== undefined && minute >= t0 && minute < t1 && <line x1={X(minute)} x2={X(minute)} y1={T} y2={h - B} stroke="#ededed" />}
+        {pi >= 0 && <circle cx={X(bins[pi] + 7.5)} cy={Y(sched[pi])} r={4} fill="#f2ad45" />}
         <text x={w - R + 12} y={T + 10} className="end-label muted">Today's peak</text>
         <text x={w - R + 12} y={T + 28} className="end-value muted">{fmt(r.peak_today)} kW</text>
         <text x={w - R + 12} y={T + 54} className="end-label">With schedule</text>
         <text x={w - R + 12} y={T + 72} className="end-value">{fmt(r.peak_schedule)} kW</text>
-        {hi >= 0 && <line x1={X(bins[hi] + 7.5)} x2={X(bins[hi] + 7.5)} y1={T} y2={h - B} stroke="var(--line-2)" />}
+        {hi >= 0 && <line x1={X(bins[hi] + 7.5)} x2={X(bins[hi] + 7.5)} y1={T} y2={h - B} stroke="rgba(237,237,237,.2)" />}
       </svg>
       {hi >= 0 && (
         <div className="tooltip" style={{ left: Math.min(X(bins[hi] + 7.5) + 12, w - R - 170), top: T }}>

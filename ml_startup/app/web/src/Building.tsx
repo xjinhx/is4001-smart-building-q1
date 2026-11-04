@@ -93,7 +93,7 @@ function ZoneBlock({ pts, y, level, active, selected, hovered, onHover, onSelect
       onClick={active ? (e) => { e.stopPropagation(); onSelect() } : undefined}
     >
       <meshStandardMaterial ref={mat} roughness={0.7} />
-      {(selected || hovered) && <Edges color={selected ? '#14241b' : '#1f4d3a'} threshold={30} />}
+      {(selected || hovered) && <Edges color={selected ? '#ededed' : '#a1a1a6'} threshold={30} />}
     </mesh>
   )
 }
@@ -214,7 +214,7 @@ function Sky({ daylight, sun: sunHeight, humidity, cloud }: { daylight: number; 
   })
   return (
     <>
-      <hemisphereLight ref={hemi} args={['#fff8e8', '#b0b5ae', 1.5]} />
+      <hemisphereLight ref={hemi} args={['#d6d8de', '#3a3633', 1.5]} />
       <directionalLight
         ref={sun} position={[40, 70, -50]} intensity={1.6} castShadow shadow-mapSize={[2048, 2048]}
         shadow-camera-left={-70} shadow-camera-right={70} shadow-camera-top={70} shadow-camera-bottom={-70}
@@ -299,16 +299,16 @@ function Tower({ zones, levels, selected, hovered, onHover, onSelect }: ScenePro
 }
 
 function Site() {
-  const road = '#cfd4cf', block = '#dde1dc'
+  const road = '#303336', block = '#5a5d60'
   return (
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]} receiveShadow>
         <planeGeometry args={[400, 400]} />
-        <meshStandardMaterial color="#eef1ec" roughness={1} />
+        <meshStandardMaterial color="#46494c" roughness={1} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[68, 54]} />
-        <meshStandardMaterial color="#e3e7e1" roughness={1} />
+        <meshStandardMaterial color="#55585b" roughness={1} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 41]} receiveShadow>
         <planeGeometry args={[400, 14]} />
@@ -337,7 +337,7 @@ type SceneProps = {
 export default function Building(props: SceneProps) {
   return (
     <Canvas
-      shadows flat dpr={[1, 2]} camera={{ position: [60, 36, -66], fov: 34, near: 1, far: 800 }}
+      shadows dpr={[1, 2]} camera={{ position: [60, 36, -66], fov: 34, near: 1, far: 800 }}
       onCreated={({ camera }) => camera.lookAt(TARGET)}
       onPointerMissed={() => { props.onHover(null); props.onDeselect?.() }}
     >
