@@ -421,6 +421,18 @@ def yearly(r: YearlyRequest):
 # Fill the hotter-year figures in the background so that page opens quickly
 threading.Thread(target=lambda: [console._heat_cubes(h) for h in HEAT_STEPS], daemon=True).start()
 
+@app.get('/api/adaptive')
+def adaptive():
+    """Day types, forecaster and 3-way benchmark from adaptive_schedule.py, which runs on this optimiser."""
+    read = lambda name: pd.read_csv(RESULTS / name)
+    monthly = read('adaptive_monthly.csv')
+    return clean(dict(benchmark=read('adaptive_benchmark.csv').to_dict('records'),
+                      forecaster=read('forecaster_accuracy.csv').to_dict('records'),
+                      day_types=read('day_type_summary.csv').drop(columns='months').to_dict('records'),
+                      schedules=read('adaptive_schedules.csv').to_dict('records'),
+                      monthly=monthly[monthly.month.str.startswith('2018')].to_dict('records')))
+
+
 dist = Path(__file__).parent / 'web' / 'dist'
 if dist.exists():
     app.mount('/', StaticFiles(directory=dist, html=True), name='web')
