@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Conditions, Init, Result } from './types'
 import { post } from './types'
-import { NO_CHANGE, ReplayPage, SchedulesPage, WhatIfPage, YearlyPage } from './pages'
+import { AdaptivePage, NO_CHANGE, ReplayPage, SchedulesPage, WhatIfPage, YearlyPage } from './pages'
 
-const PAGES = [['replay', 'Replay'], ['schedules', 'Schedules'], ['whatif', 'What if'], ['yearly', 'Yearly value']] as const
+const PAGES = [['replay', 'Replay'], ['schedules', 'Schedules'], ['whatif', 'What if'], ['yearly', 'Yearly value'], ['adaptive', 'Adaptive']] as const
 type Page = (typeof PAGES)[number][0]
 const pageFromHash = (): Page => {
   const h = location.hash.replace('#/', '')
@@ -85,16 +85,18 @@ export default function App() {
           {PAGES.map(([k, name]) => <a key={k} href={`#/${k}`} className={page === k ? 'on' : ''} aria-current={page === k ? 'page' : undefined}>{name}</a>)}
         </nav>
         <div className="controls">
-          {page !== 'yearly' && page !== 'schedules' && (
+          {page !== 'yearly' && page !== 'schedules' && page !== 'adaptive' && (
             <select aria-label="Day" value={date} onChange={(e) => setDate(e.target.value)}>
               {init.days.map((d) => <option key={d.date} value={d.date}>{d.label}{d.month_peak ? ', month peak' : ''}</option>)}
             </select>
           )}
-          <select aria-label="Schedule" value={scheduleId} onChange={(e) => pickSchedule(e.target.value)}>
-            {init.schedules.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-            {scheduleId === 'Suggested' && <option value="Suggested">Suggested for this day</option>}
-            {scheduleId === 'Custom' && <option value="Custom">Edited by hand</option>}
-          </select>
+          {page !== 'adaptive' && (
+            <select aria-label="Schedule" value={scheduleId} onChange={(e) => pickSchedule(e.target.value)}>
+              {init.schedules.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+              {scheduleId === 'Suggested' && <option value="Suggested">Suggested for this day</option>}
+              {scheduleId === 'Custom' && <option value="Custom">Edited by hand</option>}
+            </select>
+          )}
         </div>
       </header>
       {error && <div className="error" role="alert">{error}. These figures are out of date</div>}
@@ -103,6 +105,7 @@ export default function App() {
         {page === 'schedules' && <SchedulesPage init={init} r={r} offsets={offsets} scheduleId={scheduleId} onPick={pickSchedule} />}
         {page === 'whatif' && <WhatIfPage init={init} r={r} offsets={offsets} cond={cond} scheduleId={scheduleId} busy={busy} setOffset={setOffset} setCond={setCond} onSuggest={suggest} />}
         {page === 'yearly' && <YearlyPage offsets={offsets} scheduleId={scheduleId} label={label} />}
+        {page === 'adaptive' && <AdaptivePage init={init} />}
       </main>
     </div>
   )

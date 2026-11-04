@@ -1,4 +1,11 @@
 export type Zone = { floor: number; zone: number; rated_kW: number; sensor: boolean }
+export type Adaptive = {
+  benchmark: { schedule: string; cut_2018_kW: number; cut_2018_CI_lo: number; cut_2018_CI_hi: number; vs_fixed_2018_kW: number; vs_fixed_CI_lo: number; vs_fixed_CI_hi: number; comfort_2018_today: number; comfort_2018_new: number; baht_per_month_2018: number }[]
+  forecaster: { set: string; accuracy: number; top3_peak_days_accuracy: number; majority_baseline: number }[]
+  day_types: { set: string; day_type: string; n_days: number; mean_kW: number; t_mean: number }[]
+  schedules: { floor: number; zone: number; offset_min: number; day_type: string; n_days: number }[]
+  monthly: { month: string; cut_kW: number; cut_fixed_kW: number }[]
+}
 export type Day = { date: string; label: string; month: string; peak: number; month_peak: boolean; readings: number; sunrise: number; sunset: number; out_temp: number[]; out_rh: number[]; cloud: number[] }
 export type Schedule = {
   id: string; label: string; offsets: number[]; cut_2018: number; ci: [number, number]
