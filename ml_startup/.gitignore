@@ -1,3 +1,5 @@
-work/
+work/*
+!work/minute_profiles.npz
+!work/model_cubes.npz
 __pycache__/
 *.pyc
