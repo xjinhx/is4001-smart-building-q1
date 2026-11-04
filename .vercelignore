@@ -1,0 +1,19 @@
+# Only what the console reads at run time goes to Vercel. The built frontend (web/dist) stays in.
+/20*Floor*.csv
+/IS4001_Q1_Haritha.zip
+/.claude/
+.DS_Store
+__pycache__/
+*.pyc
+.git/
+
+ml_startup/app/web/node_modules/
+ml_startup/app/web/src/
+ml_startup/knime/
+ml_startup/work/shap_*.npz
+
+IS4001_Q1_Haritha/IS4001_Q1_Haritha/charts/
+IS4001_Q1_Haritha/IS4001_Q1_Haritha/code/
+IS4001_Q1_Haritha/IS4001_Q1_Haritha/knime/
+IS4001_Q1_Haritha/IS4001_Q1_Haritha/data/zone_15min_workingdays.csv
+IS4001_Q1_Haritha/IS4001_Q1_Haritha/results/baseline_hourly.csv

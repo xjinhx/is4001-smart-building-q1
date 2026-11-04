@@ -14,3 +14,6 @@ __pycache__/
 
 # Local preview config and the unslop skill copy (credited in ml_startup/README.md)
 /.claude/
+
+.vercel
+.env*
