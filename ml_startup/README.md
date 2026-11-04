@@ -74,7 +74,7 @@ How far to trust each number:
 
 Still simulated throughout: zones are treated as independent. Zone shapes on the 3D model and 2D view are traced by eye from Fig. 2 of the [CU-BEMS paper](https://doi.org/10.1038/s41597-020-00582-3), which is licensed under CC BY 4.0. The paper gives no compass direction, so which way the plan faces on the model is assumed. The building is a simplified model, not a survey. Offsets only change 11:30 to 15:30, so the rest of the replay is as recorded. The page opens on the monthly-peak day closest to the 2018 average cut, not the best-looking one.
 
-The sky on the Replay page is a time-of-day cue only, and changes no figures. Its sunrise and sunset times (`app/sun_times_2018.csv`) come from [Open-Meteo](https://open-meteo.com/), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+The sky on the Replay page is a visual cue only, and changes no figures. Its sunrise and sunset times (`app/sun_times_2018.csv`) and hourly cloud cover (`app/cloud_hourly_2018.csv`, ERA5 reanalysis estimates rather than observations) come from [Open-Meteo](https://open-meteo.com/), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
 The screen was designed using [unslop](https://github.com/heydamir/unslop) by Damir Sokolovsky ([@heydamir](https://x.com/heydamir)), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). No unslop code runs in the app. The local copy of the skill isn't committed.
 

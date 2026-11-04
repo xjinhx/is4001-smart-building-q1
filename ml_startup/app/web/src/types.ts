@@ -1,5 +1,5 @@
 export type Zone = { floor: number; zone: number; rated_kW: number; sensor: boolean }
-export type Day = { date: string; label: string; month: string; peak: number; month_peak: boolean; readings: number; sunrise: number; sunset: number }
+export type Day = { date: string; label: string; month: string; peak: number; month_peak: boolean; readings: number; sunrise: number; sunset: number; out_temp: number[]; out_rh: number[]; cloud: number[] }
 export type Schedule = {
   id: string; label: string; offsets: number[]; cut_2018: number; ci: [number, number]
   comfort_2018: number; comfort_2019: number; vs_rule: number | null; vs_rule_ci: [number, number] | null

@@ -5,6 +5,7 @@ zero the numbers match results/. Moving a slider adds the model's estimated chan
 (model with the edited inputs - model with the actual inputs). Replays 2018 holdout days;
 every model here was fitted on 2019 only.
 """
+import os
 import sys
 import threading
 from pathlib import Path
@@ -106,6 +107,8 @@ class Console:
         self.building = pd.read_csv(DATA / 'building_15min_alldays.csv', parse_dates=['ts'],
                                     usecols=['ts', 'total_kW', 'Light_kW', 'Plug_kW']).set_index('ts')
         self.sun = pd.read_csv(Path(__file__).parent / 'sun_times_2018.csv').set_index('date')
+        self.weather = pd.read_csv(DATA / 'weather_hourly_openmeteo.csv', parse_dates=['ts']).set_index('ts')
+        self.cloud = pd.read_csv(Path(__file__).parent / 'cloud_hourly_2018.csv', parse_dates=['ts']).set_index('ts')
         self.heat_lock = threading.Lock()
         self.heat = {}
 
@@ -377,7 +380,10 @@ class Console:
                              peak=round(float(self.base[d]), 1), month_peak=bool(self.base[d] >= self.base[m].max()),
                              readings=int(np.isfinite(self.opt.T[d, :, K0]).sum()),
                              sunrise=int(self.sun.loc[str(P.days[d].date()), 'sunrise_min']),
-                             sunset=int(self.sun.loc[str(P.days[d].date()), 'sunset_min'])))
+                             sunset=int(self.sun.loc[str(P.days[d].date()), 'sunset_min']),
+                             out_temp=self.weather.loc[str(P.days[d].date()), 'out_temp_C'].tolist(),
+                             out_rh=self.weather.loc[str(P.days[d].date()), 'out_rh_pct'].tolist(),
+                             cloud=self.cloud.loc[str(P.days[d].date()), 'cloud_pct'].tolist()))
         # Open on a typical month rather than the best one: the monthly-peak day whose cut
         # under the recommended schedule is closest to the 2018 average
         rec = next(x for x in self.schedules if x['label'] == 'Recommended')
@@ -420,4 +426,4 @@ if dist.exists():
     app.mount('/', StaticFiles(directory=dist, html=True), name='web')
 
 if __name__ == '__main__':
-    uvicorn.run(app, host='127.0.0.1', port=8000)
+    uvicorn.run(app, host='127.0.0.1', port=int(os.environ.get('PORT', 8000)))
