@@ -35,14 +35,14 @@ function Elevation({ init, levels, selected, onSelect }: { init: Init; levels: n
                 <g key={z} className={j >= 0 ? 'plan-zone' : ''} onClick={j >= 0 ? () => onSelect(j) : undefined}>
                   <polygon
                     points={points(ZONE_SHAPES[z])}
-                    fill={j >= 0 ? `color-mix(in srgb, #f2ad45 ${Math.round(lv * 100)}%, #2a2a2c)` : '#1d1d1f'}
-                    stroke={selected === j && j >= 0 ? '#ededed' : '#141415'} strokeWidth={selected === j && j >= 0 ? 1.5 : 1}
+                    fill={j >= 0 ? `color-mix(in srgb, var(--heat) ${Math.round(lv * 100)}%, #dfe5e0)` : '#c9d1cb'}
+                    stroke={selected === j && j >= 0 ? 'var(--text)' : 'var(--page)'} strokeWidth={selected === j && j >= 0 ? 1.5 : 1}
                   />
-                  <text x={lx * W} y={ly * H} textAnchor="middle" dominantBaseline="middle" fill={lv > 0.5 ? '#141415' : '#a1a1a6'}>{j >= 0 ? `Z${z}` : 'Stairs'}</text>
+                  <text x={lx * W} y={ly * H} textAnchor="middle" dominantBaseline="middle" fill="var(--text)">{j >= 0 ? `Z${z}` : 'Stairs'}</text>
                 </g>
               )
             })}
-            <polygon points={points(LIFT_CORE)} fill="#1d1d1f" stroke="#141415" />
+            <polygon points={points(LIFT_CORE)} fill="#c9d1cb" stroke="var(--page)" />
           </svg>
         </figure>
       ))}
@@ -219,9 +219,9 @@ function Scatter({ list, selected, today, onPick }: { list: Schedule[]; selected
   }
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="scatter" role="img" aria-label="Peak cut against change in comfort for each schedule on 2018 data">
-      {[0, 10, 20, 30].map((v) => <g key={v}><line x1={L} x2={W - R} y1={Y(v)} y2={Y(v)} stroke="rgba(237,237,237,.08)" /><text x={L - 8} y={Y(v) + 4} textAnchor="end" className="tick">{v}</text></g>)}
+      {[0, 10, 20, 30].map((v) => <g key={v}><line x1={L} x2={W - R} y1={Y(v)} y2={Y(v)} stroke="var(--line)" /><text x={L - 8} y={Y(v) + 4} textAnchor="end" className="tick">{v}</text></g>)}
       {[-12, -8, -4, 0].map((v) => <text key={v} x={X(v)} y={H - B + 18} textAnchor="middle" className="tick">{signed(v)}</text>)}
-      <line x1={X(0)} x2={X(0)} y1={T} y2={H - B} stroke="rgba(237,237,237,.28)" strokeDasharray="3 3" />
+      <line x1={X(0)} x2={X(0)} y1={T} y2={H - B} stroke="var(--line-2)" strokeDasharray="3 3" />
       <text x={X(0) - 6} y={T + 12} textAnchor="end" className="tick">No worse than today</text>
       <text x={L + (W - L - R) / 2} y={H - 6} textAnchor="middle" className="tick">Comfort change on 2018 (points)</text>
       <text x={12} y={T + (H - T - B) / 2} textAnchor="middle" transform={`rotate(-90 12 ${T + (H - T - B) / 2})`} className="tick">Monthly cut (kW)</text>
@@ -229,8 +229,8 @@ function Scatter({ list, selected, today, onPick }: { list: Schedule[]; selected
         const x = X(s.comfort_2018 - today), on = s.id === selected, [dx, dy, anchor] = labelAt(s.id)
         return (
           <g key={s.id} className="pt" onClick={() => onPick(s.id)}>
-            {s.id !== 'none' && <line x1={x} x2={x} y1={Y(s.ci[0])} y2={Y(s.ci[1])} stroke={on ? '#f2ad45' : '#85858b'} strokeWidth={1.5} />}
-            <circle cx={x} cy={Y(s.cut_2018)} r={on ? 6 : 4.5} fill={on ? '#f2ad45' : '#a1a1a6'} stroke="#141415" strokeWidth={2} />
+            {s.id !== 'none' && <line x1={x} x2={x} y1={Y(s.ci[0])} y2={Y(s.ci[1])} stroke={on ? 'var(--accent)' : 'var(--text-3)'} strokeWidth={1.5} />}
+            <circle cx={x} cy={Y(s.cut_2018)} r={on ? 6 : 4.5} fill={on ? 'var(--accent)' : 'var(--text-3)'} stroke="var(--card)" strokeWidth={2} />
             <text x={x + dx} y={Y(s.cut_2018) + dy} textAnchor={anchor} className={on ? 'pt-label on' : 'pt-label'}>{s.label}</text>
           </g>
         )

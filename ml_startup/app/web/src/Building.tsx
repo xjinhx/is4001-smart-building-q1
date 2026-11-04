@@ -93,7 +93,7 @@ function ZoneBlock({ pts, y, level, active, selected, hovered, onHover, onSelect
       onClick={active ? (e) => { e.stopPropagation(); onSelect() } : undefined}
     >
       <meshStandardMaterial ref={mat} roughness={0.7} />
-      {(selected || hovered) && <Edges color={selected ? '#ededed' : '#a1a1a6'} threshold={30} />}
+      {(selected || hovered) && <Edges color={selected ? '#14241b' : '#1f4d3a'} threshold={30} />}
     </mesh>
   )
 }
@@ -280,16 +280,16 @@ function Tower({ zones, levels, selected, hovered, onHover, onSelect }: ScenePro
 }
 
 function Site() {
-  const road = '#1d1d1f', block = '#242426'
+  const road = '#cfd4cf', block = '#dde1dc'
   return (
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]} receiveShadow>
         <planeGeometry args={[400, 400]} />
-        <meshStandardMaterial color="#121213" roughness={1} />
+        <meshStandardMaterial color="#eef1ec" roughness={1} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[68, 54]} />
-        <meshStandardMaterial color="#1a1a1c" roughness={1} />
+        <meshStandardMaterial color="#e3e7e1" roughness={1} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 41]} receiveShadow>
         <planeGeometry args={[400, 14]} />
@@ -318,7 +318,7 @@ type SceneProps = {
 export default function Building(props: SceneProps) {
   return (
     <Canvas
-      shadows dpr={[1, 2]} camera={{ position: [60, 36, -66], fov: 34, near: 1, far: 800 }}
+      shadows flat dpr={[1, 2]} camera={{ position: [60, 36, -66], fov: 34, near: 1, far: 800 }}
       onCreated={({ camera }) => camera.lookAt(TARGET)}
       onPointerMissed={() => { props.onHover(null); props.onDeselect?.() }}
     >
