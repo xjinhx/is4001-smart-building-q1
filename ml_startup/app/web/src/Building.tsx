@@ -170,32 +170,51 @@ function FloorTags() {
   )
 }
 
-// Time-of-day cue only, from that day's sunrise and sunset. It changes no figures.
-const NIGHT = new THREE.Color('#0b0d12')
-const DUSK = new THREE.Color('#2e2622')
-const DAY = new THREE.Color('#29313b')
+// A visual cue only, from that day's sunrise, sunset, humidity and estimated cloud cover. It changes no figures.
+const NIGHT = new THREE.Color('#16233d')
+const TWILIGHT = new THREE.Color('#f2b48c')
+const MORNING = new THREE.Color('#a9d6ef')
+const HAZE = new THREE.Color('#e6ebea')
+const OVERCAST = new THREE.Color('#ccd5da')
+const SUN_LOW = new THREE.Color('#ffb27a')
+const SUN_HIGH = new THREE.Color('#fff6e6')
+const WHITE = new THREE.Color('#ffffff')
+const NOON = new THREE.Color('#8fd0f7')
 
-function Sky({ daylight }: { daylight: number }) {
+function Sky({ daylight, sun: sunHeight, humidity, cloud }: { daylight: number; sun: number; humidity: number; cloud: number }) {
   const { scene } = useThree()
   const hemi = useRef<THREE.HemisphereLight>(null)
   const sun = useRef<THREE.DirectionalLight>(null)
-  const shown = useRef(daylight)
-  const color = useMemo(() => new THREE.Color(DAY), [])
+  const shown = useRef({ day: daylight, high: sunHeight, rh: humidity, cloud })
+  const color = useMemo(() => new THREE.Color(NOON), [])
   useEffect(() => {
     scene.background = color
     return () => { scene.background = null }
   }, [scene, color])
   useFrame((_, dt) => {
-    shown.current += (daylight - shown.current) * Math.min(1, dt * 5)
-    const s = shown.current
-    if (s < 0.5) color.copy(NIGHT).lerp(DUSK, s * 2)
-    else color.copy(DUSK).lerp(DAY, (s - 0.5) * 2)
-    if (hemi.current) hemi.current.intensity = 0.7 + 0.8 * s
-    if (sun.current) sun.current.intensity = 0.15 + 1.45 * s
+    const k = Math.min(1, dt * 5), now = shown.current
+    now.day += (daylight - now.day) * k
+    now.high += (sunHeight - now.high) * k
+    now.rh += (humidity - now.rh) * k
+    now.cloud += (cloud - now.cloud) * k
+    const cover = now.cloud / 100
+    if (now.high < 0.35) color.copy(TWILIGHT).lerp(MORNING, now.high / 0.35)
+    else color.copy(MORNING).lerp(NOON, (now.high - 0.35) / 0.65)
+    color.lerp(HAZE, Math.min(1, Math.max(0, (now.rh - 55) / 40)) * 0.45)
+    color.lerp(OVERCAST, cover * 0.75)
+    color.lerp(NIGHT, 1 - now.day)
+    if (hemi.current) {
+      hemi.current.intensity = 0.7 + 0.4 * now.day + 0.8 * now.high
+      hemi.current.color.copy(color).lerp(WHITE, 0.6)
+    }
+    if (sun.current) {
+      sun.current.intensity = now.day * (0.15 + 1.45 * now.high) * (1 - 0.6 * cover)
+      sun.current.color.copy(SUN_LOW).lerp(SUN_HIGH, now.high)
+    }
   })
   return (
     <>
-      <hemisphereLight ref={hemi} args={['#d6d8de', '#3a3633', 1.5]} />
+      <hemisphereLight ref={hemi} args={['#fff8e8', '#b0b5ae', 1.5]} />
       <directionalLight
         ref={sun} position={[40, 70, -50]} intensity={1.6} castShadow shadow-mapSize={[2048, 2048]}
         shadow-camera-left={-70} shadow-camera-right={70} shadow-camera-top={70} shadow-camera-bottom={-70}
@@ -310,7 +329,7 @@ function Site() {
 }
 
 type SceneProps = {
-  zones: Zone[]; levels: number[]; selected: number | null; hovered: number | null; daylight: number
+  zones: Zone[]; levels: number[]; selected: number | null; hovered: number | null; daylight: number; sun: number; humidity: number; cloud: number
   onHover: (j: number | null) => void; onSelect: (j: number) => void; onDeselect?: () => void
 }
 
@@ -322,7 +341,7 @@ export default function Building(props: SceneProps) {
       onCreated={({ camera }) => camera.lookAt(TARGET)}
       onPointerMissed={() => { props.onHover(null); props.onDeselect?.() }}
     >
-      <Sky daylight={props.daylight} />
+      <Sky daylight={props.daylight} sun={props.sun} humidity={props.humidity} cloud={props.cloud} />
       <Site />
       <Tower {...props} />
       <CameraFit />

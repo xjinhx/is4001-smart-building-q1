@@ -130,8 +130,11 @@ export function ReplayPage({ init, r, day, whatIf }: { init: Init; r: Result; da
   const active = hovered ?? selected
   const az = active !== null ? init.zones[active] : null
   const azStart = az ? r.log.find((l) => l.floor === az.floor && l.zone === az.zone) : undefined
-  // Sky is only a time-of-day cue: 0 at night, 1 in daylight, 30 min either side of sunrise and sunset
+  // Sky is only a cue: 0 at night, 1 in daylight, 30 min either side of sunrise and sunset
   const daylight = Math.min(1, Math.max(0, (minute - day.sunrise + 30) / 60)) * Math.min(1, Math.max(0, (day.sunset + 30 - minute) / 60))
+  const sun = Math.max(0, Math.sin((Math.PI * (minute - day.sunrise)) / (day.sunset - day.sunrise)))
+  const hourly = (v: number[]) => { const h = minute / 60, a = Math.floor(h); return v[a] + (v[Math.min(a + 1, 23)] - v[a]) * (h - a) }
+  const outTemp = hourly(day.out_temp), outRh = hourly(day.out_rh), cloud = hourly(day.cloud)
   const peak = mode === 'today' ? r.peak_today : r.peak_schedule
 
   return (
@@ -140,7 +143,7 @@ export function ReplayPage({ init, r, day, whatIf }: { init: Init; r: Result; da
         {view === '3d' ? (
           <Fallback onFail={() => setView('2d')}>
             <Suspense fallback={<div className="stage-wait">Drawing the building</div>}>
-              <Building zones={init.zones} levels={levels} selected={selected} hovered={hovered} daylight={daylight} onHover={setHovered} onSelect={toggleZone} onDeselect={() => setSelected(null)} />
+              <Building zones={init.zones} levels={levels} selected={selected} hovered={hovered} daylight={daylight} sun={sun} humidity={outRh} cloud={cloud} onHover={setHovered} onSelect={toggleZone} onDeselect={() => setSelected(null)} />
             </Suspense>
           </Fallback>
         ) : <Elevation init={init} levels={levels} selected={selected} onSelect={toggleZone} />}
@@ -148,6 +151,8 @@ export function ReplayPage({ init, r, day, whatIf }: { init: Init; r: Result; da
           <div className="mono readout-clock">{clock(minute)}</div>
           <div className="readout-kw">{fmt(liveKW)} kW</div>
           <div className="readout-note">{mode === 'today' ? 'As it really happened' : 'With this schedule'}</div>
+          <div className="readout-note">Outside {outTemp.toFixed(1)}°C, {Math.round(outRh)}% humidity</div>
+          <div className="readout-note">About {Math.round(cloud)}% cloud</div>
           <div className="readout-peak">Billed peak this day <b>{fmt(peak)} kW</b>{mode === 'schedule' && ` (${signed(Math.round(r.peak_schedule - r.peak_today))} vs today)`}</div>
           {whatIf && <div className="readout-note warn">What-if inputs are on</div>}
         </div>

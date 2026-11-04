@@ -61,7 +61,7 @@ select { height: 36px; background: var(--raised); border: 1px solid var(--line);
 .stage { position: relative; min-width: 0; min-height: 0; background: var(--page); overflow: hidden; }
 .stage canvas { display: block; }
 .stage-wait { height: 100%; display: grid; place-items: center; color: var(--text-3); }
-.readout { position: absolute; left: 24px; top: 16px; pointer-events: none; font-size: 13px; color: var(--text-2); }
+.readout { position: absolute; z-index: 6; left: 24px; top: 16px; pointer-events: none; font-size: 13px; color: var(--text-2); padding: 8px 12px; border-radius: 8px; background: color-mix(in srgb, var(--card) 88%, transparent); }
 .readout-clock { font-size: 14px; }
 .readout-kw { font-size: 40px; line-height: 48px; font-weight: 500; color: var(--text); font-variant-numeric: tabular-nums; }
 .readout-peak { margin-top: 8px; color: var(--text-2); }
@@ -82,8 +82,8 @@ select { height: 36px; background: var(--raised); border: 1px solid var(--line);
 .player { position: absolute; left: 24px; right: 24px; bottom: 16px; display: flex; align-items: center; gap: 12px; padding: 8px 12px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; font-size: 12px; }
 .player input { flex: 1; min-width: 64px; }
 .times { white-space: nowrap; }
-.icon { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; background: var(--text); color: #141415; flex: none; }
-.floor-tag { display: block; transform: translateX(-24px); font-family: var(--mono); font-size: 12px; color: var(--text-2); pointer-events: none; user-select: none; }
+.icon { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; background: var(--header); color: var(--on-header); flex: none; }
+.floor-tag { display: block; transform: translateX(-24px); font-family: var(--mono); font-size: 12px; color: var(--text-2); pointer-events: none; user-select: none; padding: 0 4px; border-radius: 4px; background: color-mix(in srgb, var(--card) 88%, transparent); }
 .plans { height: 100%; display: flex; justify-content: center; align-items: center; gap: 12px; padding: 64px 24px 72px 344px; }
 .plan { flex: 1 1 0; min-width: 0; max-width: 300px; margin: 0; }
 .plan figcaption { color: var(--text-2); font-size: 12px; margin-bottom: 4px; }
@@ -91,7 +91,7 @@ select { height: 36px; background: var(--raised); border: 1px solid var(--line);
 .plan text { font: 400 8px var(--mono); pointer-events: none; }
 .plan-zone { cursor: pointer; }
 .plan-zone polygon { transition: stroke 150ms var(--ease); }
-.stage-note { position: absolute; right: 24px; bottom: 76px; color: var(--text-3); font-size: 12px; pointer-events: none; }
+.stage-note { position: absolute; right: 24px; bottom: 76px; color: var(--text-2); font-size: 12px; pointer-events: none; padding: 0 6px; border-radius: 4px; background: color-mix(in srgb, var(--card) 88%, transparent); }
 
 .chart-wrap { border-top: 1px solid var(--line); padding: 8px 12px 0; min-width: 0; min-height: 0; overflow: hidden; }
 .chart { position: relative; width: 100%; height: 100%; }
