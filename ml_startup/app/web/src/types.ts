@@ -5,6 +5,7 @@ export type Adaptive = {
   day_types: { set: string; day_type: string; n_days: number; mean_kW: number; t_mean: number }[]
   schedules: { floor: number; zone: number; offset_min: number; day_type: string; n_days: number }[]
   monthly: { month: string; cut_kW: number; cut_fixed_kW: number }[]
+  forecast_test: { group: string; name: string; cut_kW: number; cut_lo: number; cut_hi: number; vs_fixed_kW: number; vs_fixed_lo: number | null; vs_fixed_hi: number | null; right_type_pct: number | null; right_type_peak_days_pct: number | null; comfort_2018_pct: number }[]
 }
 export type Day = { date: string; label: string; month: string; peak: number; month_peak: boolean; readings: number; sunrise: number; sunset: number; out_temp: number[]; out_rh: number[]; cloud: number[] }
 export type Schedule = {

@@ -363,7 +363,7 @@ const SCHEDULE_NAMES: Record<string, string> = {
   'Fixed: rule-based benchmark': 'Rule-based schedule',
   'Fixed: locked ML pick': 'One ML schedule (Recommended)',
   'Month rule (best schedule per calendar month, fit 2019)': 'Best schedule per calendar month',
-  'ML adaptive (forecast day type)': 'Adaptive, forecast day type',
+  'ML adaptive (forecast day type)': 'Adaptive, actual weather as the forecast',
   'ML adaptive, oracle day type (reference)': 'Adaptive, true day type (reference)',
 }
 const oneDp = (v: number) => signed(Math.round(v * 10) / 10)
@@ -381,6 +381,9 @@ export function AdaptivePage({ init }: { init: Init }) {
   if (!a) return <div className="splash">Loading the adaptive results</div>
   const row = (s: string) => a.benchmark.find((b) => b.schedule.startsWith(s))!
   const rule = row('Fixed: rule'), fixed = row('Fixed: locked'), adaptive = row('ML adaptive (forecast'), oracle = row('ML adaptive, oracle')
+  const tests = a.forecast_test.filter((t) => t.group === 'forecast'), sameEvery = a.forecast_test.filter((t) => t.group === 'hindsight')
+  const test = (name: string) => tests.find((t) => t.name === name)!
+  const noWeather = test('No weather for the day'), randomTypes = test('Random day types'), best = sameEvery.reduce((x, y) => (y.cut_kW > x.cut_kW ? y : x))
   const hold = a.forecaster.find((f) => f.set.includes('2018'))!
   const types = [...new Set(a.day_types.map((d) => d.day_type))].sort()
   const days = (t: string, set: string) => a.day_types.find((d) => d.day_type === t && d.set === set)
@@ -389,13 +392,13 @@ export function AdaptivePage({ init }: { init: Init }) {
   const steps = [
     { title: 'Clean data and a benchmark', text: 'Turns the raw meters into working days, then sets the rule-based schedule to beat.', s: rule, name: 'Rule-based schedule' },
     { title: 'ML models and an optimiser', text: "Predicts each zone's restart load and comfort, then finds one schedule for every day.", s: fixed, name: 'One ML schedule' },
-    { title: 'Day types and a forecast', text: "Groups days by load shape, runs the same optimiser per group, then forecasts tomorrow's group.", s: adaptive, name: 'A schedule per day type' },
+    { title: 'Day types and a forecast', text: "Groups days by load shape, runs the same optimiser per group, then forecasts tomorrow's group.", s: null, name: 'A schedule per day type, depending on the forecast' },
   ]
   return (
     <div className="page doc">
       <header className="doc-head">
-        <h2>Matching the schedule to the day</h2>
-        <p>Each step builds on the one before it. The adaptive schedule runs the same models and optimiser as Recommended, and uses the forecast to choose which schedule each day gets.</p>
+        <h2>Does matching the schedule to the day help?</h2>
+        <p>Not shown yet. Each step builds on the one before it, and the adaptive schedule runs the same models and optimiser as Recommended. With weather a real forecast could know, the gain shrinks to between about {fmt(noWeather.vs_fixed_kW, 1)} and {fmt(test("Yesterday's weather").vs_fixed_kW, 1)} kW a month, and random day types average {fmt(randomTypes.cut_kW, 1)} kW.</p>
       </header>
       <ol className="flow">
         {steps.map(({ title, text, s, name }, i) => (
@@ -403,15 +406,35 @@ export function AdaptivePage({ init }: { init: Init }) {
             <div className="flow-n mono">Step {i + 1}{i < 2 && <ChevronRight size={16} strokeWidth={1.5} />}</div>
             <h3>{title}</h3>
             <p className="hint">{text}</p>
-            <div className="big-line flow-cut">{fmt(s.cut_2018_kW, 1)} kW</div>
+            <div className="big-line flow-cut">{s ? `${fmt(s.cut_2018_kW, 1)} kW` : `${fmt(noWeather.cut_kW, 1)} to ${fmt(adaptive.cut_2018_kW, 1)} kW`}</div>
             <p className="hint">{name}, monthly cut on 2018</p>
           </li>
         ))}
       </ol>
+      <div className="panel table-wrap">
+        <h3 className="table-title">How much depends on the forecast?</h3>
+        <table>
+          <thead><tr><th>Day type chosen using</th><th className="n">Monthly cut, 2018</th><th className="n">Range</th><th className="n">vs one ML schedule</th><th className="n">Right day type</th><th className="n">On peak days</th><th className="n">{'≤'}25{'°'}C, 2018</th></tr></thead>
+          <tbody>
+            {tests.map((t) => (
+              <tr key={t.name} className="static">
+                <td>{t.name}</td>
+                <td className="n">{fmt(t.cut_kW, 1)} kW</td>
+                <td className="n">{fmt(t.cut_lo, 1)} to {fmt(t.cut_hi, 1)}</td>
+                <td className="n">{oneDp(t.vs_fixed_kW)}{t.vs_fixed_lo !== null && t.vs_fixed_hi !== null ? ` (${oneDp(t.vs_fixed_lo)} to ${oneDp(t.vs_fixed_hi)})` : ''}</td>
+                <td className="n">{t.right_type_pct === null ? '' : `${fmt(t.right_type_pct)}%`}</td>
+                <td className="n">{t.right_type_peak_days_pct === null ? '' : `${fmt(t.right_type_peak_days_pct)}%`}</td>
+                <td className="n">{fmt(t.comfort_2018_pct, 1)}%</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="hint table-note">Ranges are 95% for actual, yesterday's and no weather. Forecast errors show the lowest to highest of 30 runs, using errors we assumed. Random day types show the middle 95% of 200 runs.</p>
+      </div>
       <div className="doc-split">
         <div className="panel">
           <h3>Monthly cut on the 2018 holdout</h3>
-          <p className="hint legend"><i className="key adaptive" />Adaptive <i className="key fixed" />One ML schedule</p>
+          <p className="hint legend"><i className="key adaptive" />Adaptive, actual weather <i className="key fixed" />One ML schedule</p>
           <ul className="bars paired">
             {a.monthly.map((m) => (
               <li key={m.month}>
@@ -432,6 +455,7 @@ export function AdaptivePage({ init }: { init: Init }) {
           </div>
           <div className="panel-gap"><ZoneGrid init={init} offsets={offsets} /></div>
           <p className="hint">{days(type, 'train_2019')?.n_days ?? 0} days in 2019, {days(type, 'holdout_2018')?.n_days ?? 0} in the 2018 holdout. Minutes from today's restart</p>
+          <p className="hint strong">Used on every 2018 day: {fmt(sameEvery.find((t) => t.name === type)?.cut_kW ?? 0, 1)} kW a month. Hindsight only, not a result</p>
         </div>
       </div>
       <div className="panel table-wrap">
@@ -439,7 +463,7 @@ export function AdaptivePage({ init }: { init: Init }) {
           <thead><tr><th>Schedule</th><th className="n">Monthly cut, 2018</th><th className="n">95% range</th><th className="n">vs one ML schedule</th><th className="n">{'≤'}25{'°'}C, 2018</th><th className="n">Baht a month</th></tr></thead>
           <tbody>
             {a.benchmark.map((b) => (
-              <tr key={b.schedule} className={b === adaptive ? 'on static' : 'static'}>
+              <tr key={b.schedule} className="static">
                 <td>{SCHEDULE_NAMES[b.schedule] ?? b.schedule}</td>
                 <td className="n">{fmt(b.cut_2018_kW, 1)} kW</td>
                 <td className="n">{fmt(b.cut_2018_CI_lo, 1)} to {fmt(b.cut_2018_CI_hi, 1)}</td>
@@ -454,9 +478,9 @@ export function AdaptivePage({ init }: { init: Init }) {
       <div className="panel caveats">
         <h3>Read this before quoting it</h3>
         <ul>
-          <li><ChevronRight size={16} strokeWidth={1.5} />The forecast uses each day's actual weather as a stand-in, so a real day-ahead forecast could do worse</li>
-          <li><ChevronRight size={16} strokeWidth={1.5} />It picks the right day type on {fmt(hold.accuracy * 100)}% of 2018 days ({fmt(hold.majority_baseline * 100)}% for always guessing the commonest type), and {fmt(hold.top3_peak_days_accuracy * 100)}% of peak days</li>
-          <li><ChevronRight size={16} strokeWidth={1.5} />Adaptive with the forecast ({fmt(adaptive.cut_2018_kW, 1)} kW) beat adaptive with the true type ({fmt(oracle.cut_2018_kW, 1)} kW), so the gain isn't only from forecasting the type correctly</li>
+          <li><ChevronRight size={16} strokeWidth={1.5} />{fmt(adaptive.cut_2018_kW, 1)} kW uses each day's actual weather, which a day-ahead forecast wouldn't have, so treat it as an upper estimate</li>
+          <li><ChevronRight size={16} strokeWidth={1.5} />Forecast accuracy doesn't explain the gain: random day types ({fmt(randomTypes.cut_kW, 1)} kW) did about as well as realistic forecasts, and adaptive with actual weather beat adaptive with the true type ({fmt(oracle.cut_2018_kW, 1)} kW). It picks the right type on {fmt(hold.accuracy * 100)}% of 2018 days, against {fmt(hold.majority_baseline * 100)}% for always guessing the commonest type</li>
+          <li><ChevronRight size={16} strokeWidth={1.5} />The schedule from lighter days did best on 2018 ({fmt(best.cut_kW, 1)} kW on every day). 2018 had mostly lighter days, which may explain it, but picking it needs hindsight, so it isn't a result</li>
           <li><ChevronRight size={16} strokeWidth={1.5} />2018 comfort is {fmt(adaptive.comfort_2018_new, 1)}% of zone-days at or below 25{'°'}C, against {fmt(adaptive.comfort_2018_today, 1)}% today, and the holdout has only {days('T3-High-hot', 'holdout_2018')?.n_days ?? 0} high-load, hot day</li>
           <li><ChevronRight size={16} strokeWidth={1.5} />Simulated from real time-shifted curves, with no staggered start ever run in the building</li>
         </ul>
