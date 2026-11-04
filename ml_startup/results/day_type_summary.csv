@@ -1,0 +1,7 @@
+set,day_type,n_days,mean_kW,t_mean,months
+holdout_2018,T1-Low-mild,55,230.2,27.5,"[8, 9, 12]"
+holdout_2018,T2-Mid-mild,32,254.4,27.8,"[7, 8, 9]"
+holdout_2018,T3-High-hot,1,273.0,28.3,[7]
+train_2019,T1-Low-mild,46,226.8,27.2,"[1, 9, 8]"
+train_2019,T2-Mid-mild,82,253.0,28.5,"[6, 3, 8]"
+train_2019,T3-High-hot,43,293.4,30.2,"[4, 5, 7]"
