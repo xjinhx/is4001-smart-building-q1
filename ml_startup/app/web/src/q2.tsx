@@ -16,12 +16,19 @@ const POLICY_NOTE: Record<Policy, string> = {
   continuous20: '20 consecutive abnormal minutes',
   '20of30': 'At least 20 of the last 30 minutes abnormal (main policy)',
 }
-// review_group names are the Q2 team's own; the note is the rule that assigns each one
-const GROUP_NOTE: Record<string, string> = {
+// review_group names are the Q2 team's own. Each is defined by which policies alert, so the text below only
+// restates that rule in words. GROUP_SHORT is the brief form used in the workload note.
+const GROUP_TEXT: Record<string, string> = {
+  immediate_only: 'Only Immediate alerts. The readings were abnormal, but never for 20 of any 30 minutes, so Continuous20 and 20of30 stay quiet.',
+  interruption_tolerance_adds_case: "20of30 alerts but Continuous20 doesn't. The readings were abnormal for at least 20 of 30 minutes, but with breaks, so never 20 minutes in a row.",
+  shorter_duration_adds_case: 'Continuous20 and 20of30 alert. The readings were abnormal for at least 20 minutes in a row, but not 30.',
+  shared_sustained_case: 'Every policy alerts. The readings were abnormal for at least 30 minutes in a row.',
+}
+const GROUP_SHORT: Record<string, string> = {
   immediate_only: 'only Immediate alerts',
-  interruption_tolerance_adds_case: '20of30 alerts, Continuous20 does not',
-  shorter_duration_adds_case: 'Continuous20 alerts, Continuous30 does not',
-  shared_sustained_case: 'Continuous30 alerts too',
+  interruption_tolerance_adds_case: '20 of 30 minutes abnormal, with breaks',
+  shorter_duration_adds_case: '20 to 29 minutes abnormal in a row',
+  shared_sustained_case: '30 or more minutes abnormal in a row',
 }
 // Thai national public holidays, May to December 2019, from the API (q2_alerts/build_alerts.py keeps the list).
 // A case that starts on one is held back as a suspected false alarm instead of being flagged.
@@ -179,7 +186,7 @@ export function AlertDetail({ id, onClose, onReplay }: { id: number; onClose: ()
               {POLICIES.map((p) => (
                 <div key={p}><dt>{POLICY_LABEL[p]}</dt><dd className="mono">{c.alerts[p] ? `${c.held ? 'would alert' : 'alerts'} ${c.alerts[p]!.slice(11, 16)}, ${c.delay[p]} min after the case starts` : 'no alert'}</dd></div>
               ))}
-              <div><dt>review_group</dt><dd><span className="mono">{c.review_group}</span> <span className="muted">({GROUP_NOTE[c.review_group]})</span></dd></div>
+              <div className="q2-wide"><dt>Abnormal pattern</dt><dd className="q2-text">{GROUP_TEXT[c.review_group]}<span className="q2-code">review_group: {c.review_group}</span></dd></div>
               {c.review && <div><dt>Reviewed ({c.review.review_id})</dt><dd><b className={c.review.rating === 'investigate' ? 'q2-red' : ''}>{c.review.rating}</b>: {c.review.reason}</dd></div>}
             </dl>
             <CaseChart d={d} />
@@ -685,7 +692,7 @@ export function WorkloadPage() {
             </tbody>
           </table>
         </div>
-        <p className="hint">Missed means a flagged case Immediate alerts on that the policy does not. The estimate uses the step 1 reviewer's Floor 3 ratings for each review group: {Object.entries(sh).filter(([, v]) => v.share !== null).map(([g, v]) => `${g} ${fmt(v.share!, 2)}`).join(', ')}. Each rests on 4 plots, so treat it as rough.</p>
+        <p className="hint">Missed means a flagged case Immediate alerts on that the policy does not. The estimate uses the step 1 reviewer's Floor 3 ratings for each review group: {Object.entries(sh).filter(([, v]) => v.share !== null).map(([g, v]) => `${GROUP_SHORT[g]} (${g}) ${fmt(v.share!, 2)}`).join('; ')}. Each rests on 4 plots, so treat it as rough.</p>
       </div>
       <div className="doc-split q2-split panel-gap">
         <div className="panel">
@@ -707,7 +714,6 @@ export function WorkloadPage() {
             <li><ChevronRight size={16} strokeWidth={1.5} />Alerts are excursions from a 28-day statistical baseline, not confirmed faults</li>
             <li><ChevronRight size={16} strokeWidth={1.5} />Settings were chosen on Floor 3, May to September, and frozen. Floors 4 to 7 and October to December were not used to tune them</li>
             <li><ChevronRight size={16} strokeWidth={1.5} />The baseline does not model holidays. Cases starting on a Thai national public holiday are held back as suspected false alarms and left out of every count here; other days when the building is closed are not detected</li>
-            <li><ChevronRight size={16} strokeWidth={1.5} />The minutes per alert are your assumption, not measured</li>
           </ul>
         </div>
       </div>
