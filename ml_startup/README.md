@@ -109,11 +109,13 @@ Three extra tabs in the console add the Q2 group's AC alert work (repo `emmafoo-
 
 | Page | What it shows |
 |---|---|
-| Alerts | Replays a 2019 day on the building. Pick Immediate, Continuous20 or 20of30 (the main policy); zones turn red from an alert until its case ends, a pop-up appears for each new alert, and clicking it opens the minute-by-minute readings with a CSV download |
-| Alert list | Every alert of each policy, May to December 2019 (Immediate 4,776, Continuous20 432, 20of30 521), filterable by floor, unit, period and direction, exportable as CSV |
+| Alerts | Replays a 2019 day on the building. Pick Immediate, Continuous20 or 20of30 (the main policy); zones turn red from an alert until its case ends, a pop-up appears for each new alert, and clicking it opens the minute-by-minute readings with a CSV download. Held-back alerts are listed separately as suspected false alarms |
+| Alert list | Every flagged alert of each policy, May to December 2019 (Immediate 4,363, Continuous20 249, 20of30 314), and separately the suspected false alarms held back on public holidays (413, 183, 207), filterable by floor, unit, period and direction, exportable as CSV |
 | Alert workload | Alerts a week per policy, the facilities manager hours they imply for a chosen minutes per alert, and what the fewer alerts cost: cases missed against Immediate and the estimated missed cases worth investigating |
 
-The method and settings are the Q2 team's, unchanged: the 28-day same-minute baseline (weekday and weekend apart), threshold max(3 sd, 0.5 kW), cases grouped across gaps of up to 15 minutes, and the policies compared on the same fully observed 30-minute windows. Continuous30 was dropped in step 4 and is computed only to assign each case its `review_group`. The rebuild matches the Q2 Floor 3 output exactly (1,405 alert rows).
+The method and settings are the Q2 team's, unchanged: the 28-day same-minute baseline (weekday and weekend apart), threshold max(3 sd, 0.5 kW), cases grouped across gaps of up to 15 minutes, and the policies compared on the same fully observed 30-minute windows. Holiday check: the baseline does not model holidays, so each case is checked against the 2019 Thai national public holiday calendar (`HOLIDAYS` in `build_alerts.py`, including holidays that fell on a weekend and their substitute days; government-only days are left out). A case that starts on a holiday is not flagged. It is kept as a suspected false alarm, with the reason, and left out of every count and workload figure.
+
+Continuous30 was dropped in step 4 and is computed only to assign each case its `review_group`. The rebuild matches the Q2 Floor 3 output exactly (1,405 alert rows).
 
 Rebuild the data from `ml_startup` (under a minute; needs the raw `2019FloorN.csv` files in the repo root):
 
@@ -126,7 +128,7 @@ This writes `app/q2/alerts.json` and `app/q2/minutes_2019.npz`, which `app/q2_ap
 Limits:
 - An alert is an excursion from a statistical baseline, not a confirmed fault.
 - Settings were chosen on Floor 3, May to September. Floors 4 to 7 and October to December were not used to tune them.
-- Public holidays are not modelled. The busiest alert days in October to December (14 Oct, 23 Oct, 5 Dec, 10 Dec) are all Thai public holidays, when many units run below expected at once. The pages mark holidays, and the Alerts page opens on the busiest non-holiday day.
+- Only the holiday calendar is checked. Other days when the building is closed or runs unusually are not detected. Because cases on holidays are now held back, the workload figures for Floor 3, May to September, differ from the step 3 tables, which counted every case.
 - The "worth investigating" estimate uses the step 1 reviewer's ratings, 4 Floor 3 plots per `review_group`, so it is rough.
 - Hours saved depend on the minutes per alert you set on the page.
 

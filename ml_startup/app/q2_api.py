@@ -2,7 +2,8 @@
 
 Data comes from ml_startup/app/q2/, built by q2_alerts/build_alerts.py from the raw 2019 Floor 3-7 files.
 Everything here is real 2019 data; nothing is simulated. Cases are excursions from a statistical baseline,
-not confirmed faults.
+not confirmed faults. A case that starts on a Thai public holiday is held back as a suspected false alarm
+(field 'held'): it keeps its policy alert times but is not counted as a flagged alert anywhere.
 """
 import json
 from functools import lru_cache
@@ -51,7 +52,9 @@ def review_shares(cases):
 @lru_cache(maxsize=1)
 def summaries():
     meta, _, _, _ = data()
-    cases = pd.DataFrame(meta['cases'])
+    allc = pd.DataFrame(meta['cases'])
+    held_all = allc[allc.held.notna()]
+    cases = allc[allc.held.isna()]                      # flagged: holiday cases are held back
     weeks = pd.DataFrame(meta['weeks'])
     shares = review_shares(meta['cases'])
     periods = {p['id']: (pd.Timestamp(p['start']), pd.Timestamp(p['end'])) for p in meta['periods']}
@@ -60,9 +63,10 @@ def summaries():
     for floor in ['all', 3, 4, 5, 6, 7]:
         for period, (ps, pe) in periods.items():
             c = cases if floor == 'all' else cases[cases.floor == floor]
+            h = held_all if floor == 'all' else held_all[held_all.floor == floor]
             w = weeks if floor == 'all' else weeks[weeks.floor == floor]
             if period != 'all':
-                c, w = c[c.period == period], w[w.period == period]
+                c, w, h = c[c.period == period], w[w.period == period], h[h.period == period]
             unit_weeks = float(w.weeks.sum())
             cal_weeks = ((pe - ps).days + 1) / 7
             imm = c[c.alerts.map(lambda a: a['immediate'] is not None)]
@@ -74,6 +78,7 @@ def summaries():
                 est = sum(n * (shares[g]['share'] or 0) for g, n in by_group.items())
                 rows.append(dict(
                     floor=floor, period=period, policy=p, label=LABEL[p], cases=len(hit),
+                    held=int(h.alerts.map(lambda a: a[p] is not None).sum()),
                     unit_weeks=round(unit_weeks, 1), calendar_weeks=round(cal_weeks, 1),
                     cases_per_monitored_week=round(len(hit) / unit_weeks, 2) if unit_weeks else None,
                     alerts_per_week=round(len(hit) / cal_weeks, 2),
@@ -104,16 +109,18 @@ def init():
     rows, shares = summaries()
     days = pd.date_range(meta['start'], meta['end'], freq='D')
     per_day = {d.strftime('%Y-%m-%d'): {p: 0 for p in SHOWN} for d in days}
+    held_day = {d: {p: 0 for p in SHOWN} for d in per_day}
     for c in meta['cases']:
         for p in SHOWN:
             t = c['alerts'][p]
             if t:
-                per_day[t[:10]][p] += 1
+                (held_day if c['held'] else per_day)[t[:10]][p] += 1
     return dict(
         year=meta['year'], start=meta['start'], end=meta['end'], periods=meta['periods'], units=meta['units'],
         settings=meta['settings'], note=meta['note'], policies=[dict(id=p, label=LABEL[p]) for p in SHOWN],
         days=[dict(date=d, label=pd.Timestamp(d).strftime('%a %d %b %Y'), weekend=pd.Timestamp(d).dayofweek >= 5,
-                   counts=v) for d, v in per_day.items()],
+                   counts=v, held=held_day[d]) for d, v in per_day.items()],
+        holidays=meta['holidays'],
         workload=rows, shares=shares, reviewer=reviewer_table(meta['cases']))
 
 
@@ -122,7 +129,7 @@ def cases():
     """Every case with at least one alert, with the alert time of each shown policy."""
     meta, _, _, _ = data()
     keep = ('id', 'floor', 'zone', 'unit', 'direction', 'period', 'start', 'end', 'span', 'abnormal', 'longest_run',
-            'mean_observed', 'mean_expected', 'review_group', 'review')
+            'mean_observed', 'mean_expected', 'review_group', 'review', 'held')
     return [dict({k: c[k] for k in keep}, alerts={p: c['alerts'][p] for p in SHOWN},
                  delay={p: c['delay'][p] for p in SHOWN}) for c in meta['cases']]
 
@@ -170,7 +177,7 @@ def case_rows(cid):
             expected=None if not np.isfinite(exp[k]) else round(float(exp[k]), 2),
             threshold=None if not np.isfinite(thr[k]) else round(float(thr[k]), 2),
             abnormal=bool(flags[k]), abnormal_in_last_30=int(roll[k]), consecutive_abnormal=int(run[k]),
-            alerts=[LABEL[p] for p, a in alert_min.items() if a == ts]))
+            alerts=[LABEL[p] + (' (held: holiday)' if c['held'] else '') for p, a in alert_min.items() if a == ts]))
     return c, rows
 
 
@@ -178,7 +185,7 @@ def case_rows(cid):
 def case(cid: int):
     c, rows = case_rows(cid)
     keep = ('id', 'floor', 'zone', 'unit', 'direction', 'period', 'start', 'end', 'span', 'abnormal', 'longest_run',
-            'mean_observed', 'mean_expected', 'review_group', 'review')
+            'mean_observed', 'mean_expected', 'review_group', 'review', 'held')
     return dict(case=dict({k: c[k] for k in keep}, alerts={p: c['alerts'][p] for p in SHOWN},
                           delay={p: c['delay'][p] for p in SHOWN}), rows=rows, pad=PAD)
 
@@ -190,6 +197,7 @@ def case_csv(cid: int):
     df['alerts'] = df.alerts.map(' '.join)
     df.insert(1, 'unit', f"F{c['floor']} {c['unit']}")
     df.insert(2, 'direction', c['direction'])
+    df.insert(3, 'held_back', f"suspected false alarm: {c['held']['holiday']}" if c['held'] else '')
     name = f"alert_{c['floor']}_{c['unit']}_{c['start'][:16].replace(' ', '_').replace(':', '')}.csv"
     return Response(df.to_csv(index=False), media_type='text/csv',
                     headers={'Content-Disposition': f'attachment; filename="{name}"'})

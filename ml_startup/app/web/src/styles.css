@@ -234,6 +234,13 @@ tbody tr.static:hover { background: none; }
 .q2-alerts .plans { padding-left: 432px; padding-right: 320px; flex-wrap: wrap; align-content: center; row-gap: 16px; }
 .q2-alerts .plan { flex: 0 1 30%; }
 .q2-holiday { color: var(--warn, #f2ad45); }
+.q2-alerts .readout { max-width: 384px; }
+.q2-held-head { border-top: 1px solid var(--line); color: var(--warn); }
+.q2-list-panel ol { flex: 0 1 auto; min-height: 0; }
+.q2-list-panel .q2-held-list { flex-shrink: 2; }
+.q2-held-list button { color: var(--text-3); }
+.q2-held-note { margin: 0; padding: 8px 12px; border: 1px solid var(--warn); border-radius: 8px; color: var(--text-2); font-size: 13px; }
+.q2-held-note b { color: var(--warn); font-weight: 500; }
 .q2-list-panel li button { grid-template-columns: 48px 1fr 36px; }
 .q2-zone-card { right: 312px; }
 .q2-toast { position: absolute; z-index: 7; left: 50%; top: 16px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 8px; background: var(--card); border: 1px solid var(--alert); color: var(--text); font-size: 13px; text-align: left; box-shadow: 0 0 0 4px rgba(229, 72, 77, .12); animation: q2-in 220ms var(--ease); }
