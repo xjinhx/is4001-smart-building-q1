@@ -19,6 +19,7 @@ import uvicorn
 import xgboost as xgb
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel, Field
 
 from config import COMFORT_C, DATA, DEMAND_BAHT_PER_KW, OFFSETS, PM_COMFORT_ELAPSED, RESULTS, WORK
@@ -26,6 +27,7 @@ from models import (BIN_MINS, KW_FEATURES, PM_T_FEATURES, REL_HI, REL_LO, add_at
                     kw_table, load_events, temp_tables)
 from optimiser import K0, Optimiser
 from sim import bootstrap_cut, shift
+from q2_api import router as q2_router
 
 WINDOW_START = 690      # 11:30, in minutes after midnight: offsets only change this window
 WINDOW_LEN = 240
@@ -400,6 +402,9 @@ class Console:
 
 console = Console()
 app = FastAPI(title='Chamchuri 5 restart console')
+# Q2 AC alerts (2019, Floors 3-7): separate read-only pages, see q2_api.py
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+app.include_router(q2_router)
 app.get('/api/init')(console.init)
 
 

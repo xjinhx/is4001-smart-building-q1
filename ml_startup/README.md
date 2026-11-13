@@ -103,6 +103,33 @@ sched = opt.schedules_for_day_types(series) # Series of labels by date: one sche
 
 Use `sim.bootstrap_cut` for ranges (same resampling as `stagger.py`). The best fixed schedules are in `results/schedule_offsets_all.csv`. Fit only on 2019 days and score on 2018. `work/` isn't committed, so run `prep.py` and `run_schedule.py`, or get the two files (under 2 MB each) from Jinhong.
 
+## Q2 AC alerts (Alerts, Alert list, Alert workload)
+
+Three extra tabs in the console add the Q2 group's AC alert work (repo `emmafoo-2023/SBA_Q2-main`) on real 2019 readings for Floors 3 to 7. The Q1 tabs are unchanged.
+
+| Page | What it shows |
+|---|---|
+| Alerts | Replays a 2019 day on the building. Pick Immediate, Continuous20 or 20of30 (the main policy); zones turn red from an alert until its case ends, a pop-up appears for each new alert, and clicking it opens the minute-by-minute readings with a CSV download |
+| Alert list | Every alert of each policy, May to December 2019 (Immediate 4,776, Continuous20 432, 20of30 521), filterable by floor, unit, period and direction, exportable as CSV |
+| Alert workload | Alerts a week per policy, the facilities manager hours they imply for a chosen minutes per alert, and what the fewer alerts cost: cases missed against Immediate and the estimated missed cases worth investigating |
+
+The method and settings are the Q2 team's, unchanged: the 28-day same-minute baseline (weekday and weekend apart), threshold max(3 sd, 0.5 kW), cases grouped across gaps of up to 15 minutes, and the policies compared on the same fully observed 30-minute windows. Continuous30 was dropped in step 4 and is computed only to assign each case its `review_group`. The rebuild matches the Q2 Floor 3 output exactly (1,405 alert rows).
+
+Rebuild the data from `ml_startup` (under a minute; needs the raw `2019FloorN.csv` files in the repo root):
+
+```bash
+python q2_alerts/build_alerts.py
+```
+
+This writes `app/q2/alerts.json` and `app/q2/minutes_2019.npz`, which `app/q2_api.py` serves under `/api/q2/`. `q2_alerts/inputs/` holds the step 1 and step 4 review ratings (Floor 3 only).
+
+Limits:
+- An alert is an excursion from a statistical baseline, not a confirmed fault.
+- Settings were chosen on Floor 3, May to September. Floors 4 to 7 and October to December were not used to tune them.
+- Public holidays are not modelled. The busiest alert days in October to December (14 Oct, 23 Oct, 5 Dec, 10 Dec) are all Thai public holidays, when many units run below expected at once. The pages mark holidays, and the Alerts page opens on the busiest non-holiday day.
+- The "worth investigating" estimate uses the step 1 reviewer's ratings, 4 Floor 3 plots per `review_group`, so it is rough.
+- Hours saved depend on the minutes per alert you set on the page.
+
 ## Files
 
 | File | Does |
@@ -113,4 +140,5 @@ Use `sim.bootstrap_cut` for ranges (same resampling as `stagger.py`). The best f
 | `optimiser.py`, `select_variant.py`, `run_schedule.py` | Optimiser and API; 2019 CV; final scoring |
 | `charts.py`, `knime/` | Slide charts `charts/ml_01–05`; KNIME node code and setup (no longer presented) |
 | `app/` | What-if console: `api.py` backend, `web/` React and Three.js frontend |
+| `q2_alerts/build_alerts.py`, `app/q2_api.py`, `app/web/src/q2.tsx` | Q2 AC alerts: data build, API and the three alert pages |
 | `results/ml_schedule.csv`, `ml_monthly.csv`, `ml_bootstrap.csv` | Same formats as `stagger_*.csv` |
