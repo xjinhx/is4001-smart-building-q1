@@ -13,9 +13,12 @@ with the settings frozen in step 4:
   - policies compared on the same fully observed 30-minute windows:
     Immediate (first abnormal minute), Continuous20 (20 consecutive), 20of30 (at least 20 of the last 30).
     Continuous30 is computed only to assign each case its review_group, as in the Q2 work.
+Holiday check (added for the console): the baseline does not know about Thai public holidays, so every case is
+checked against the 2019 national public holiday calendar by the date the case starts. A case that starts on a
+holiday keeps its policy alert times but is marked held=suspected false alarm and is not flagged as an alert.
 Periods: May-June development, July-September validation, October-December evaluation.
 
-Writes ml_startup/app/q2/alerts.json (cases, workload, days) and ml_startup/app/q2/minutes_2019.npz
+Writes ml_startup/app/q2/alerts.json (cases, monitored weeks, holidays) and ml_startup/app/q2/minutes_2019.npz
 (observed, expected and threshold kW and the abnormal flag per unit and minute, May to December), which the console reads.
 Cases are statistical excursions from the baseline, not confirmed faults.
 """
@@ -40,6 +43,18 @@ PERIODS = [('development', '2019-05-01', '2019-06-30'),
            ('validation', '2019-07-01', '2019-09-30'),
            ('evaluation', '2019-10-01', '2019-12-31')]
 START, KEEP_FROM, END = '2019-04-01', '2019-05-01', '2019-12-31'
+# Thai national public holidays, May to December 2019, including holidays that fell on a weekend and their
+# substitute weekdays (source: officeholidays.com/countries/thailand/2019). Government-only days
+# (Royal Ploughing 9 May, Buddhist Lent 17 Jul, ASEAN Summit 4-5 Nov) are not included.
+HOLIDAYS = {
+    '2019-05-01': 'Labour Day', '2019-05-04': 'Coronation Day', '2019-05-06': 'Coronation Day (extra holiday)',
+    '2019-05-18': 'Visakha Bucha', '2019-05-20': 'Visakha Bucha (substitute)', '2019-06-03': "Queen Suthida's Birthday",
+    '2019-07-16': 'Asahna Bucha', '2019-07-28': "King Vajiralongkorn's Birthday",
+    '2019-07-29': "King Vajiralongkorn's Birthday (substitute)", '2019-08-12': "Queen Mother's Birthday",
+    '2019-10-13': 'King Bhumibol Memorial Day', '2019-10-14': 'King Bhumibol Memorial Day (substitute)',
+    '2019-10-23': 'Chulalongkorn Day', '2019-12-05': "King Bhumibol's Birthday", '2019-12-10': 'Constitution Day',
+    '2019-12-30': 'New Year holiday', '2019-12-31': "New Year's Eve",
+}
 SCALE = 100            # minutes file stores kW x 100 as uint16
 MISSING = 65535
 
@@ -171,6 +186,7 @@ def main():
                     lengths = [b - a for a, b in runs(seg)]
                     at = {m: alerts.get(m) for m in POLICIES}
                     start = index[s]
+                    holiday = HOLIDAYS.get(start.strftime('%Y-%m-%d'))
                     rev = reviewed.get((unit, start)) if floor == 3 else None
                     cases.append(dict(
                         unit_id=u, floor=floor, zone=zone, unit=unit.replace('(kW)', ''), direction=direction,
@@ -181,6 +197,9 @@ def main():
                         alerts={m: (str(index[t]) if t is not None else None) for m, t in at.items()},
                         delay={m: (int(t - s) if t is not None else None) for m, t in at.items()},
                         review_group=review_group(at),
+                        held=dict(reason='Thai public holiday', holiday=holiday,
+                                  note=f'Case starts on a public holiday ({holiday}); the building is likely not operating as usual')
+                        if holiday else None,
                         review=rev, s=int(s - k0), e=int(e - k0), dir=1 if direction == 'high' else -1))
             for period, ps, pe in PERIODS:
                 mask = (index >= ps) & (index < pd.Timestamp(pe) + pd.Timedelta(days=1))
@@ -194,15 +213,18 @@ def main():
     meta = dict(
         year=2019, start=KEEP_FROM, end=END, scale=SCALE, missing=MISSING,
         periods=[dict(id=p, start=s, end=e) for p, s, e in PERIODS],
-        units=units, weeks=weeks, cases=cases,
+        units=units, weeks=weeks, cases=cases, holidays=HOLIDAYS,
         settings=dict(window_days=WINDOW_DAYS, sigma=SIGMA, min_deviation_kw=MIN_DEVIATION_KW, gap_minutes=GAP),
         note='Method and frozen settings from the SBA Q2 team (steps 1-4). Cases are excursions from a statistical '
              'baseline, not confirmed faults. Reviews exist for some Floor 3 cases only.')
     (OUT / 'alerts.json').write_text(json.dumps(meta, separators=(',', ':')), encoding='utf-8')
     df = pd.DataFrame(cases)
+    df['held'] = df.held.notna()
     for m in ('immediate', 'continuous20', '20of30'):
         df[m] = df.alerts.map(lambda a: a[m] is not None)
-    print(df.groupby(['floor', 'period'])[['immediate', 'continuous20', '20of30']].sum())
+    print('Flagged alerts')
+    print(df[~df.held].groupby(['floor', 'period'])[['immediate', 'continuous20', '20of30']].sum())
+    print('Held back (case starts on a public holiday):', df[df.held][['immediate', 'continuous20', '20of30']].sum().to_dict())
     print('Saved', OUT / 'alerts.json', 'and', OUT / 'minutes_2019.npz')
 
 

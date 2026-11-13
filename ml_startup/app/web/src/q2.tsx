@@ -23,16 +23,9 @@ const GROUP_NOTE: Record<string, string> = {
   shorter_duration_adds_case: 'Continuous20 alerts, Continuous30 does not',
   shared_sustained_case: 'Continuous30 alerts too',
 }
-// Thai public holidays, May to December 2019 (national, plus the Bangkok ASEAN Summit days). The 28-day baseline does not
-// know about holidays, so a holiday on a weekday shows up as many units running below expected at once.
-export const HOLIDAYS: Record<string, string> = {
-  '2019-05-01': 'Labour Day', '2019-05-06': 'Coronation Day', '2019-05-20': 'Visakha Bucha (substitute)',
-  '2019-06-03': "Queen's Birthday", '2019-07-16': 'Asahna Bucha', '2019-07-17': 'Buddhist Lent',
-  '2019-07-29': "King's Birthday (substitute)", '2019-08-12': "Queen Mother's Birthday",
-  '2019-10-14': 'King Bhumibol Memorial (substitute)', '2019-10-23': 'Chulalongkorn Day',
-  '2019-11-04': 'ASEAN Summit holiday', '2019-11-05': 'ASEAN Summit holiday', '2019-12-05': "King Bhumibol's Birthday",
-  '2019-12-10': 'Constitution Day', '2019-12-30': 'New Year holiday', '2019-12-31': "New Year's Eve",
-}
+// Thai national public holidays, May to December 2019, from the API (q2_alerts/build_alerts.py keeps the list).
+// A case that starts on one is held back as a suspected false alarm instead of being flagged.
+export let HOLIDAYS: Record<string, string> = {}
 const PERIOD_LABEL: Record<string, string> = {
   all: 'May to December', development: 'May to June (development)', validation: 'July to September (validation)',
   evaluation: 'October to December (evaluation)',
@@ -42,11 +35,12 @@ export type Q2Case = {
   id: number; floor: number; zone: number; unit: string; direction: 'high' | 'low'; period: string
   start: string; end: string; span: number; abnormal: number; longest_run: number; mean_observed: number; mean_expected: number
   review_group: string; review: { review_id: string; rating: string; reason: string } | null
+  held: { reason: string; holiday: string; note: string } | null
   alerts: Record<Policy, string | null>; delay: Record<Policy, number | null>
 }
 type WorkloadRow = {
   floor: number | 'all'; period: string; policy: Policy | 'continuous30'; label: string; cases: number; unit_weeks: number
-  calendar_weeks: number; cases_per_monitored_week: number | null; alerts_per_week: number; missed: number
+  calendar_weeks: number; held: number; cases_per_monitored_week: number | null; alerts_per_week: number; missed: number
   missed_per_monitored_week: number | null; missed_pct: number | null; average_delay: number | null
   total_delay_per_monitored_week: number | null; missed_by_group: Record<string, number>
   estimated_missed_worth_investigating: number; estimated_per_week: number
@@ -55,7 +49,8 @@ export type Q2Init = {
   year: number; start: string; end: string; periods: { id: string; start: string; end: string }[]
   units: { id: number; floor: number; zone: number; unit: string }[]
   settings: { window_days: number; sigma: number; min_deviation_kw: number; gap_minutes: number }; note: string
-  days: { date: string; label: string; weekend: boolean; counts: Record<Policy, number> }[]
+  days: { date: string; label: string; weekend: boolean; counts: Record<Policy, number>; held: Record<Policy, number> }[]
+  holidays: Record<string, string>
   workload: WorkloadRow[]
   shares: Record<string, { plots: number; investigate: number; share: number | null }>
   reviewer: { policy: Policy; label: string; plots: number; investigate: number; monitor: number; investigate_pct: number | null }[]
@@ -83,7 +78,9 @@ function loadQ2() {
   if (!store) {
     store = Promise.all([fetch('/api/q2/init'), fetch('/api/q2/cases')]).then(async ([a, b]) => {
       if (!a.ok || !b.ok) throw new Error(`The backend returned ${a.ok ? b.status : a.status}`)
-      return { init: await a.json(), cases: await b.json() }
+      const init: Q2Init = await a.json()
+      HOLIDAYS = init.holidays
+      return { init, cases: await b.json() }
     })
     store.catch(() => { store = null })
   }
@@ -165,7 +162,7 @@ export function AlertDetail({ id, onClose, onReplay }: { id: number; onClose: ()
       <aside className="q2-drawer" role="dialog" aria-label="Alert details" onClick={(e) => e.stopPropagation()}>
         <header className="q2-drawer-head">
           <div>
-            <h3>{c ? `${where(c)}, ${c.direction === 'high' ? 'above' : 'below'} expected` : 'Alert details'}</h3>
+            <h3>{c ? `${where(c)}, ${c.direction === 'high' ? 'above' : 'below'} expected${c.held ? ' (held back)' : ''}` : 'Alert details'}</h3>
             {c && <div className="muted">Floor {c.floor}, zone {c.zone}, {longDate(dayOf(c.start))}</div>}
           </div>
           <button aria-label="Close alert details" onClick={onClose}><X size={16} strokeWidth={1.5} /></button>
@@ -174,12 +171,13 @@ export function AlertDetail({ id, onClose, onReplay }: { id: number; onClose: ()
         {!c && !error && <p className="muted q2-pad">Loading the minutes for this alert</p>}
         {c && d && (
           <div className="q2-drawer-body">
+            {c.held && <p className="q2-held-note"><b>Not flagged: suspected false alarm.</b> {c.held.note}. The policy times below are when it would have alerted.</p>}
             <dl className="q2-facts">
               <div><dt>Case</dt><dd className="mono">{c.start.slice(11, 16)} to {c.end.slice(11, 16)}{dayOf(c.end) !== dayOf(c.start) ? ' next day' : ''}, {c.span} min</dd></div>
               <div><dt>Abnormal minutes</dt><dd className="mono">{c.abnormal} of {c.span}, longest run {c.longest_run}</dd></div>
               <div><dt>Average power</dt><dd className="mono">{fmt(c.mean_observed, 1)} kW against {fmt(c.mean_expected, 1)} kW expected</dd></div>
               {POLICIES.map((p) => (
-                <div key={p}><dt>{POLICY_LABEL[p]}</dt><dd className="mono">{c.alerts[p] ? `alerts ${c.alerts[p]!.slice(11, 16)}, ${c.delay[p]} min after the case starts` : 'no alert'}</dd></div>
+                <div key={p}><dt>{POLICY_LABEL[p]}</dt><dd className="mono">{c.alerts[p] ? `${c.held ? 'would alert' : 'alerts'} ${c.alerts[p]!.slice(11, 16)}, ${c.delay[p]} min after the case starts` : 'no alert'}</dd></div>
               ))}
               <div><dt>review_group</dt><dd><span className="mono">{c.review_group}</span> <span className="muted">({GROUP_NOTE[c.review_group]})</span></dd></div>
               {c.review && <div><dt>Reviewed ({c.review.review_id})</dt><dd><b className={c.review.rating === 'investigate' ? 'q2-red' : ''}>{c.review.rating}</b>: {c.review.reason}</dd></div>}
@@ -347,7 +345,10 @@ export function AlertsPage({ zones, focus, onFocus }: { zones: Init['zones']; fo
   }, [playing, minute])
 
   const unitZone = useMemo(() => q ? q.init.units.map((u) => zones.findIndex((z) => z.floor === u.floor && z.zone === u.zone)) : [], [q, zones])
-  const todays = useMemo(() => q && date ? q.cases.filter((c) => POLICIES.some((p) => c.alerts[p] && dayOf(c.alerts[p]!) === date)) : [], [q, date])
+  const onDay = useMemo(() => q && date ? q.cases.filter((c) => POLICIES.some((p) => c.alerts[p] && dayOf(c.alerts[p]!) === date)) : [], [q, date])
+  const todays = useMemo(() => onDay.filter((c) => !c.held), [onDay])
+  const heldToday = useMemo(() => onDay.filter((c) => c.held && c.alerts[policy] && dayOf(c.alerts[policy]!) === date)
+    .sort((a, b) => a.alerts[policy]!.localeCompare(b.alerts[policy]!)), [onDay, policy, date])
   const fired = useMemo(() => todays.filter((c) => c.alerts[policy] && dayOf(c.alerts[policy]!) === date)
     .sort((a, b) => a.alerts[policy]!.localeCompare(b.alerts[policy]!)), [todays, policy, date])
   if (error) return <div className="splash">{error}</div>
@@ -392,11 +393,12 @@ export function AlertsPage({ zones, focus, onFocus }: { zones: Init['zones']; fo
         ) : <Plans zones={zones} levels={levels} alerts={alertZones} onSelect={(j) => setSelected((s) => (s === j ? null : j))} />}
         <div className="readout">
           <div className="mono readout-clock">{longDate(date)}, {clock(minute)}</div>
-          {HOLIDAYS[date] && <div className="readout-note q2-holiday">Public holiday: {HOLIDAYS[date]}. The baseline does not account for holidays.</div>}
+          {HOLIDAYS[date] && <div className="readout-note q2-holiday">Public holiday: {HOLIDAYS[date]}. Cases starting today are held back as suspected false alarms.</div>}
           <div className="readout-kw">{fmt(totalKW)} kW</div>
           <div className="readout-note">AC load on Floors 3 to 7, as recorded</div>
           <div className="readout-peak">{POLICY_LABEL[policy]} alerts so far today <b>{sofar.length}</b> of {fired.length}</div>
           <div className="readout-note mono">Today: {POLICIES.map((p) => `${POLICY_LABEL[p]} ${dayInfo.counts[p]}`).join(', ')}</div>
+          {dayInfo.held[policy] > 0 && <div className="readout-note">{dayInfo.held[policy]} {POLICY_LABEL[policy]} held back as suspected false alarms</div>}
         </div>
         {fresh && (
           <button className="q2-toast" onClick={() => setOpen(fresh.id)}>
@@ -425,6 +427,19 @@ export function AlertsPage({ zones, focus, onFocus }: { zones: Init['zones']; fo
               ))}
             </ol>
           ) : <p className="hint q2-pad">No {POLICY_LABEL[policy]} alerts on this day</p>}
+          {heldToday.length > 0 && (
+            <>
+              <div className="log-head q2-held-head"><span>Suspected false alarms ({heldToday.length})</span></div>
+              <p className="hint q2-pad">Not flagged: {heldToday[0].held!.holiday}, a public holiday</p>
+              <ol className="q2-held-list">
+                {heldToday.map((c) => (
+                  <li key={c.id}><button onClick={() => setOpen(c.id)}>
+                    <span className="mono">{c.alerts[policy]!.slice(11, 16)}</span><span>{where(c)}</span><span className="mono">{c.direction}</span>
+                  </button></li>
+                ))}
+              </ol>
+            </>
+          )}
         </div>
         {az && (
           <div className="zone-card q2-zone-card">
@@ -441,7 +456,7 @@ export function AlertsPage({ zones, focus, onFocus }: { zones: Init['zones']; fo
           <button className="tool" onClick={goNext} disabled={!next && !nextDay}><SkipForward size={16} strokeWidth={1.5} />Next alert</button>
           <button className="icon" aria-label="Previous day" disabled={di === 0} onClick={() => { setDate(q.init.days[di - 1].date); setPlaying(false) }}><ChevronLeft size={16} strokeWidth={1.5} /></button>
           <select aria-label="Day" value={date} onChange={(e) => { setDate(e.target.value); setPlaying(false) }}>
-            {q.init.days.map((d) => <option key={d.date} value={d.date}>{d.label}{HOLIDAYS[d.date] ? ' (holiday)' : ''}, {d.counts[policy]} {POLICY_LABEL[policy]}</option>)}
+            {q.init.days.map((d) => <option key={d.date} value={d.date}>{d.label}{HOLIDAYS[d.date] ? ' (holiday)' : ''}, {d.counts[policy]} {POLICY_LABEL[policy]}{d.held[policy] ? `, ${d.held[policy]} held` : ''}</option>)}
           </select>
           <button className="icon" aria-label="Next day" disabled={di === q.init.days.length - 1} onClick={() => { setDate(q.init.days[di + 1].date); setPlaying(false) }}><ChevronRight size={16} strokeWidth={1.5} /></button>
         </div>
@@ -462,6 +477,7 @@ const PAGE = 100
 export function AlertListPage({ onReplay }: { onReplay: (f: Focus) => void }) {
   const { q, error } = useQ2()
   const [policy, setPolicy] = useState<Policy>('20of30')
+  const [status, setStatus] = useState<'flagged' | 'held'>('flagged')
   const [floor, setFloor] = useState<'all' | number>('all')
   const [period, setPeriod] = useState('all')
   const [direction, setDirection] = useState<'all' | 'high' | 'low'>('all')
@@ -469,20 +485,20 @@ export function AlertListPage({ onReplay }: { onReplay: (f: Focus) => void }) {
   const [sort, setSort] = useState<{ key: SortKey; up: boolean }>({ key: 'alert', up: true })
   const [page, setPage] = useState(0)
   const [open, setOpen] = useState<number | null>(null)
-  useEffect(() => setPage(0), [policy, floor, period, direction, unit, sort])
+  useEffect(() => setPage(0), [policy, status, floor, period, direction, unit, sort])
 
   const rows = useMemo(() => {
     if (!q) return []
-    const list = q.cases.filter((c) => c.alerts[policy] && (floor === 'all' || c.floor === floor) && (period === 'all' || c.period === period)
+    const list = q.cases.filter((c) => c.alerts[policy] && !!c.held === (status === 'held') && (floor === 'all' || c.floor === floor) && (period === 'all' || c.period === period)
       && (direction === 'all' || c.direction === direction) && (unit === 'all' || c.unit === unit))
     const val = (c: Q2Case): string | number => sort.key === 'alert' ? c.alerts[policy]! : sort.key === 'delay' ? c.delay[policy] ?? 0
       : sort.key === 'floor' ? c.floor * 10 + c.zone : sort.key === 'unit' ? `${c.floor}${c.unit}` : c[sort.key]
     return list.sort((a, b) => { const x = val(a), y = val(b); return (x < y ? -1 : x > y ? 1 : 0) * (sort.up ? 1 : -1) })
-  }, [q, policy, floor, period, direction, unit, sort])
+  }, [q, policy, status, floor, period, direction, unit, sort])
   if (error) return <div className="splash">{error}</div>
   if (!q) return <div className="splash">Loading the 2019 alerts</div>
 
-  const counts = POLICIES.map((p) => q.cases.filter((c) => c.alerts[p] && (floor === 'all' || c.floor === floor) && (period === 'all' || c.period === period)
+  const counts = POLICIES.map((p) => q.cases.filter((c) => c.alerts[p] && !!c.held === (status === 'held') && (floor === 'all' || c.floor === floor) && (period === 'all' || c.period === period)
     && (direction === 'all' || c.direction === direction) && (unit === 'all' || c.unit === unit)).length)
   const units = [...new Set(q.init.units.filter((u) => floor === 'all' || u.floor === floor).map((u) => u.unit))].sort()
   const shown = rows.slice(page * PAGE, (page + 1) * PAGE)
@@ -493,13 +509,13 @@ export function AlertListPage({ onReplay }: { onReplay: (f: Focus) => void }) {
   )
   const exportCsv = () => {
     const cols = ['policy', 'alert_time', 'floor', 'zone', 'unit', 'direction', 'case_start', 'case_end', 'delay_min', 'abnormal_minutes', 'longest_abnormal_run', 'case_minutes',
-      'mean_observed_kw', 'mean_expected_kw', ...POLICIES.map((p) => `${p}_alert`), 'review_group', 'review_id', 'review_rating', 'public_holiday']
+      'mean_observed_kw', 'mean_expected_kw', ...POLICIES.map((p) => `${p}_alert`), 'review_group', 'review_id', 'review_rating', 'status', 'held_reason']
     const lines = rows.map((c) => [POLICY_LABEL[policy], c.alerts[policy], c.floor, c.zone, c.unit, c.direction, c.start, c.end, c.delay[policy], c.abnormal, c.longest_run, c.span,
-      c.mean_observed, c.mean_expected, ...POLICIES.map((p) => c.alerts[p] ?? ''), c.review_group, c.review?.review_id ?? '', c.review?.rating ?? '', HOLIDAYS[dayOf(c.alerts[policy]!)] ?? ''].map(csvCell).join(','))
+      c.mean_observed, c.mean_expected, ...POLICIES.map((p) => c.alerts[p] ?? ''), c.review_group, c.review?.review_id ?? '', c.review?.rating ?? '', c.held ? 'suspected false alarm (not flagged)' : 'flagged', c.held ? `${c.held.reason}: ${c.held.holiday}` : ''].map(csvCell).join(','))
     const blob = new Blob([[cols.join(','), ...lines].join('\n')], { type: 'text/csv' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
-    a.download = `ac_alerts_${policy}_${floor === 'all' ? 'floors3-7' : `floor${floor}`}_${period}.csv`
+    a.download = `ac_alerts_${status === 'held' ? 'suspected_false_alarms_' : ''}${policy}_${floor === 'all' ? 'floors3-7' : `floor${floor}`}_${period}.csv`
     a.click()
     URL.revokeObjectURL(a.href)
   }
@@ -507,9 +523,13 @@ export function AlertListPage({ onReplay }: { onReplay: (f: Focus) => void }) {
     <div className="page doc">
       <header className="doc-head">
         <h2>AC alert list</h2>
-        <p>Every alert raised in {q.init.year} on Floors 3 to 7, compiled per policy. Pick a policy to see its full list. Click a row for the minute-by-minute readings.</p>
+        <p>Every alert raised in {q.init.year} on Floors 3 to 7, compiled per policy. Pick a policy to see its full list. Click a row for the minute-by-minute readings. Cases that start on a Thai public holiday are not flagged; they are listed under suspected false alarms.</p>
       </header>
       <div className="q2-filters">
+        <div className="seg" role="group" aria-label="Flagged or held back">
+          <button className={status === 'flagged' ? 'on' : ''} onClick={() => setStatus('flagged')}>Flagged alerts</button>
+          <button className={status === 'held' ? 'on' : ''} onClick={() => setStatus('held')}>Suspected false alarms</button>
+        </div>
         <div className="seg" role="group" aria-label="Alert policy">
           {POLICIES.map((p, k) => <button key={p} className={policy === p ? 'on' : ''} onClick={() => setPolicy(p)} title={POLICY_NOTE[p]}>{POLICY_LABEL[p]} <span className="mono q2-count">{fmt(counts[k])}</span></button>)}
         </div>
@@ -528,18 +548,20 @@ export function AlertListPage({ onReplay }: { onReplay: (f: Focus) => void }) {
         <button className="tool" onClick={exportCsv}><Download size={16} strokeWidth={1.5} />Export this list (CSV)</button>
       </div>
       <div className="panel q2-table-panel">
-        <div className="table-title"><b>{fmt(rows.length)} {POLICY_LABEL[policy]} alerts</b> <span className="muted">{POLICY_NOTE[policy]}</span></div>
+        <div className="table-title">{status === 'flagged'
+          ? <><b>{fmt(rows.length)} {POLICY_LABEL[policy]} alerts</b> <span className="muted">{POLICY_NOTE[policy]}</span></>
+          : <><b>{fmt(rows.length)} {POLICY_LABEL[policy]} suspected false alarms</b> <span className="muted">Would have alerted, but the case starts on a public holiday, when the building is likely not operating as usual. Not flagged.</span></>}</div>
         <div className="table-wrap">
           <table>
             <thead><tr>
               {head('alert', 'Alert time')}{head('floor', 'Floor, zone')}{head('unit', 'AC unit')}{head('direction', 'Power')}
               <th>Case</th>{head('delay', 'Minutes to alert', true)}{head('abnormal', 'Abnormal min', true)}{head('longest_run', 'Longest run', true)}
-              <th>Other policies</th><th>Review</th><th />
+              <th>Other policies</th><th>{status === 'held' ? 'Reason held back' : 'Review'}</th><th />
             </tr></thead>
             <tbody>
               {shown.map((c) => (
                 <tr key={c.id} onClick={() => setOpen(c.id)}>
-                  <td className="mono">{shortStamp(c.alerts[policy]!)}{HOLIDAYS[dayOf(c.alerts[policy]!)] && <span className="q2-holiday" title={HOLIDAYS[dayOf(c.alerts[policy]!)]}> holiday</span>}</td>
+                  <td className="mono">{shortStamp(c.alerts[policy]!)}</td>
                   <td className="mono">F{c.floor} Z{c.zone}</td>
                   <td className="mono">{c.unit}</td>
                   <td className={c.direction === 'high' ? 'q2-red' : ''}>{c.direction === 'high' ? 'Above' : 'Below'}</td>
@@ -548,13 +570,13 @@ export function AlertListPage({ onReplay }: { onReplay: (f: Focus) => void }) {
                   <td className="n mono">{c.abnormal}</td>
                   <td className="n mono">{c.longest_run}</td>
                   <td className="muted">{POLICIES.filter((p) => p !== policy && c.alerts[p]).map((p) => POLICY_LABEL[p]).join(', ') || 'none'}</td>
-                  <td>{c.review ? <span className={c.review.rating === 'investigate' ? 'q2-red' : 'muted'}>{c.review.rating} ({c.review.review_id})</span> : ''}</td>
+                  <td>{c.held ? <span className="q2-holiday">{c.held.reason}: {c.held.holiday}</span> : c.review ? <span className={c.review.rating === 'investigate' ? 'q2-red' : 'muted'}>{c.review.rating} ({c.review.review_id})</span> : ''}</td>
                   <td><button className="ghost" onClick={(e) => { e.stopPropagation(); onReplay({ date: dayOf(c.alerts[policy]!), minute: Math.max(0, minOfDay(c.start) - 10) }) }}>Replay <ExternalLink size={14} strokeWidth={1.5} /></button></td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {!rows.length && <p className="hint q2-pad">No alerts match these filters</p>}
+          {!rows.length && <p className="hint q2-pad">{status === 'held' ? 'No suspected false alarms match these filters' : 'No alerts match these filters'}</p>}
         </div>
         {rows.length > PAGE && (
           <div className="q2-pager">
@@ -590,7 +612,7 @@ export function WorkloadPage() {
     <div className="page doc">
       <header className="doc-head">
         <h2>How many alerts would the facilities manager handle?</h2>
-        <p>{where_}. Counts are real alerts from the {q.init.year} readings. Time figures depend on the minutes per alert you set.</p>
+        <p>{where_}. Counts are real alerts from the {q.init.year} readings, after holding back cases that start on a Thai public holiday ({POLICIES.map((p) => `${POLICY_LABEL[p]} ${fmt(rows[p].held)}`).join(', ')} held back). Time figures depend on the minutes per alert you set.</p>
       </header>
       <div className="q2-filters">
         <select aria-label="Floor" value={floor} onChange={(e) => setFloor(e.target.value === 'all' ? 'all' : +e.target.value)}>
@@ -663,7 +685,7 @@ export function WorkloadPage() {
             </tbody>
           </table>
         </div>
-        <p className="hint">Missed means a case Immediate alerts on that the policy does not. The estimate uses the step 1 reviewer's Floor 3 ratings for each review group: {Object.entries(sh).filter(([, v]) => v.share !== null).map(([g, v]) => `${g} ${fmt(v.share!, 2)}`).join(', ')}. Each rests on 4 plots, so treat it as rough.</p>
+        <p className="hint">Missed means a flagged case Immediate alerts on that the policy does not. The estimate uses the step 1 reviewer's Floor 3 ratings for each review group: {Object.entries(sh).filter(([, v]) => v.share !== null).map(([g, v]) => `${g} ${fmt(v.share!, 2)}`).join(', ')}. Each rests on 4 plots, so treat it as rough.</p>
       </div>
       <div className="doc-split q2-split panel-gap">
         <div className="panel">
@@ -684,7 +706,7 @@ export function WorkloadPage() {
           <ul>
             <li><ChevronRight size={16} strokeWidth={1.5} />Alerts are excursions from a 28-day statistical baseline, not confirmed faults</li>
             <li><ChevronRight size={16} strokeWidth={1.5} />Settings were chosen on Floor 3, May to September, and frozen. Floors 4 to 7 and October to December were not used to tune them</li>
-            <li><ChevronRight size={16} strokeWidth={1.5} />Holidays are not modelled, so some low-power alerts may fall on public holidays</li>
+            <li><ChevronRight size={16} strokeWidth={1.5} />The baseline does not model holidays. Cases starting on a Thai national public holiday are held back as suspected false alarms and left out of every count here; other days when the building is closed are not detected</li>
             <li><ChevronRight size={16} strokeWidth={1.5} />The minutes per alert are your assumption, not measured</li>
           </ul>
         </div>
