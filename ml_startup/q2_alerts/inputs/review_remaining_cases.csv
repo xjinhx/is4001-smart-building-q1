@@ -1,0 +1,7 @@
+review_id,unit,direction,window_start,window_end_exclusive,plot,rating,reason,supporting_evidence_needed
+V01,z1_AC2(kW),high,3/7/2019 17:20,3/7/2019 17:41,V01.png,Monitor,AC runs steadily around 2.5 kW for about 20 minutes and then switches off. It looks like a single run at an unusual time.,
+V02,z1_AC3(kW),high,12/7/2019 16:44,12/7/2019 18:11,V02.png,Uncertain,Power repeatedly cycles between about 0.1 and 1.3 kW over the review window. The historical baseline is near zero.,
+V03,z1_AC3(kW),high,27/7/2019 15:05,27/7/2019 15:45,V03.png,Monitor,Power stays around 1.3 kW for most of the run. Two brief dips break the consecutive-minute count.,
+V04,z1_AC3(kW),high,7/9/2019 10:30,7/9/2019 10:55,V04.png,Monitor,"Power stays near 1.2 kW after the alert window ends. The threshold band widens around 10:55, bringing the same power level back inside the band.",
+V05,z2_AC1(kW),low,3/7/2019 13:19,3/7/2019 13:48,V05.png,Investigate,Power drops from about 23 to 14 kW around 13:30 and stays near 14 kW after the alert window ends.,
+V06,z2_AC1(kW),low,23/9/2019 14:36,23/9/2019 15:26,V06.png,Investigate,"After running modestly below expected power, the unit briefly drops from about 13 kW to 1.5 kW and then recovers.",

@@ -1,6 +1,6 @@
 # IS4001 Smart Building Analytics: Q1 staggered AC start-up
 
-Chamchuri 5 (CU-BEMS), Floors 3 to 7. See [ml_startup/README.md](ml_startup/README.md) for the ML start-up model, the optimiser and the results.
+Chamchuri 5 (CU-BEMS), Floors 3 to 7. See [ml_startup/README.md](ml_startup/README.md) for the ML start-up model, the optimiser and the results. The console also has three Q2 tabs (Alerts, Alert list, Alert workload) with the Q2 group's AC alert policies on 2019 data; see [Q2 AC alerts](ml_startup/README.md#q2-ac-alerts-alerts-alert-list-alert-workload).
 
 ## Setup
 
