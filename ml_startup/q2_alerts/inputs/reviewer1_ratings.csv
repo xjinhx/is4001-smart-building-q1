@@ -1,0 +1,21 @@
+review_id,unit,period,reviewer_1_rating,reviewer_1_reason
+R01,z1_AC3(kW),development,investigate,Observed power significantly higher than the expected power for a long period of time.
+R02,z2_AC1(kW),validation,monitor,Nothing out of the ordinary
+R03,z5_AC1(kW),validation,monitor,Power seems to be within the expected range
+R04,z1_AC3(kW),development,investigate,Multiple power surges throughout the window
+R05,z1_AC3(kW),development,investigate,Observed power significantly higher than the expected power for a long period of time.
+R06,z1_AC2(kW),development,investigate,Observed power significantly higher than the expected power
+R07,z2_AC1(kW),validation,investigate,Observed power significantly higher than the expected power towards end of window
+R08,z2_AC1(kW),validation,monitor,Seems like the power surges were expected
+R09,z4_AC1(kW),validation,monitor,Nothing out of the ordinary
+R10,z1_AC4(kW),validation,monitor,Nothing out of the ordinary
+R11,z4_AC1(kW),development,monitor,Nothing out of the ordinary
+R12,z1_AC2(kW),validation,monitor,Power surges were predicted but prediction was slightly late
+R13,z4_AC1(kW),development,investigate,Observed power significantly lower than expected power
+R14,z5_AC1(kW),development,monitor,Nothing out of the ordinary
+R15,z1_AC1(kW),development,investigate,Observed power significantly higher than expected power
+R16,z5_AC1(kW),development,monitor,Nothing out of the ordinary
+R17,z4_AC1(kW),validation,investigate,Expected fluctuation of power but no change in power at all
+R18,z4_AC1(kW),validation,investigate,Expected fluctuation of power but no change in power at all
+R19,z1_AC4(kW),validation,investigate,Observed power significantly lower than expected power
+R20,z4_AC1(kW),validation,investigate,Expected fluctuation of power but no change in power at all

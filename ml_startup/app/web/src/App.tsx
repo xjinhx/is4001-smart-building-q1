@@ -2,8 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Conditions, Init, Result } from './types'
 import { post } from './types'
 import { AdaptivePage, NO_CHANGE, ReplayPage, SchedulesPage, WhatIfPage, YearlyPage } from './pages'
+import { AlertListPage, AlertsPage, WorkloadPage, type Focus } from './q2'
 
-const PAGES = [['replay', 'Replay'], ['schedules', 'Schedules'], ['whatif', 'What if'], ['yearly', 'Yearly value'], ['adaptive', 'Adaptive']] as const
+const PAGES = [['replay', 'Replay'], ['schedules', 'Schedules'], ['whatif', 'What if'], ['yearly', 'Yearly value'], ['adaptive', 'Adaptive'],
+  ['alerts', 'Alerts'], ['alertlist', 'Alert list'], ['workload', 'Alert workload']] as const
+// Q2 pages: real 2019 AC alerts, with their own day and policy controls
+const Q2_PAGES: readonly string[] = ['alerts', 'alertlist', 'workload']
 type Page = (typeof PAGES)[number][0]
 const pageFromHash = (): Page => {
   const h = location.hash.replace('#/', '')
@@ -21,6 +25,8 @@ export default function App() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const seq = useRef(0)
+  const [focus, setFocus] = useState<Focus | null>(null)
+  const toReplay = useCallback((f: Focus) => { setFocus(f); location.hash = '#/alerts' }, [])
 
   useEffect(() => {
     const on = () => setPage(pageFromHash())
@@ -73,24 +79,25 @@ export default function App() {
   const whatIf = cond.outdoor_delta_C !== 0 || cond.indoor_delta_C !== 0 || cond.load_delta_pct !== 0
   const named = init.schedules.find((s) => s.id === scheduleId)
   const label = named?.label ?? (scheduleId === 'Suggested' ? 'Suggested for this day' : 'Edited by hand')
+  const q2 = Q2_PAGES.includes(page)
 
   return (
     <div className="shell">
       <header className="top">
         <div className="brand">
           <h1>Chamchuri 5 restart console</h1>
-          <span>Simulated from recorded 2018 data</span>
+          <span>{q2 ? 'AC alerts from recorded 2019 data' : 'Simulated from recorded 2018 data'}</span>
         </div>
         <nav aria-label="Pages">
           {PAGES.map(([k, name]) => <a key={k} href={`#/${k}`} className={page === k ? 'on' : ''} aria-current={page === k ? 'page' : undefined}>{name}</a>)}
         </nav>
         <div className="controls">
-          {page !== 'yearly' && page !== 'schedules' && page !== 'adaptive' && (
+          {page !== 'yearly' && page !== 'schedules' && page !== 'adaptive' && !q2 && (
             <select aria-label="Day" value={date} onChange={(e) => setDate(e.target.value)}>
               {init.days.map((d) => <option key={d.date} value={d.date}>{d.label}{d.month_peak ? ', month peak' : ''}</option>)}
             </select>
           )}
-          {page !== 'adaptive' && (
+          {page !== 'adaptive' && !q2 && (
             <select aria-label="Schedule" value={scheduleId} onChange={(e) => pickSchedule(e.target.value)}>
               {init.schedules.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
               {scheduleId === 'Suggested' && <option value="Suggested">Suggested for this day</option>}
@@ -106,6 +113,9 @@ export default function App() {
         {page === 'whatif' && <WhatIfPage init={init} r={r} offsets={offsets} cond={cond} scheduleId={scheduleId} busy={busy} setOffset={setOffset} setCond={setCond} onSuggest={suggest} />}
         {page === 'yearly' && <YearlyPage offsets={offsets} scheduleId={scheduleId} label={label} />}
         {page === 'adaptive' && <AdaptivePage init={init} />}
+        {page === 'alerts' && <AlertsPage zones={init.zones} focus={focus} onFocus={setFocus} />}
+        {page === 'alertlist' && <AlertListPage onReplay={toReplay} />}
+        {page === 'workload' && <WorkloadPage />}
       </main>
     </div>
   )

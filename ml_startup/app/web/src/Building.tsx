@@ -19,6 +19,7 @@ const WALL_OFF = '#9a6a56'
 const INERT = '#6d5a50'
 const LIT = '#f2ad45'
 const GLASS = '#5f8ea3'
+const ALERT = '#e5484d'      // Q2 alerts page only: a zone with an open alert
 
 function rounded(w: number, d: number, r: number) {
   const s = new THREE.Shape()
@@ -68,22 +69,30 @@ function Slab({ w, d, r, h, y, color = CREAM }: { w: number; d: number; r: numbe
 
 type ZoneProps = {
   pts: Pt[]; y: number; level: number; active: boolean; selected: boolean; hovered: boolean
-  onHover: (on: boolean) => void; onSelect: () => void
+  onHover: (on: boolean) => void; onSelect: () => void; alert?: boolean
 }
 
-function ZoneBlock({ pts, y, level, active, selected, hovered, onHover, onSelect }: ZoneProps) {
+function ZoneBlock({ pts, y, level, active, selected, hovered, onHover, onSelect, alert = false }: ZoneProps) {
   const geo = useMemo(() => new THREE.ExtrudeGeometry(planShape(pts), { depth: FLOOR_H - 0.5, bevelEnabled: false, curveSegments: 12 }), [pts])
   const mat = useRef<THREE.MeshStandardMaterial>(null)
   const off = useMemo(() => new THREE.Color(active ? WALL_OFF : INERT), [active])
   const on = useMemo(() => new THREE.Color(LIT), [])
+  const red = useMemo(() => new THREE.Color(ALERT), [])
   // Eases towards the current load, so a restart reads as a zone coming on
   const shown = useRef(0)
-  useFrame((_, dt) => {
+  useFrame(({ clock }, dt) => {
     if (!mat.current) return
     shown.current += (level - shown.current) * Math.min(1, dt * 7)
     mat.current.color.copy(off).lerp(on, shown.current)
     mat.current.emissive.copy(on)
     mat.current.emissiveIntensity = shown.current * 0.35
+    if (alert) {
+      // Q2 alerts page: an open alert pulses red over the load colour
+      const pulse = 0.5 + 0.5 * Math.sin(clock.elapsedTime * 4)
+      mat.current.color.lerp(red, 0.75)
+      mat.current.emissive.copy(red)
+      mat.current.emissiveIntensity = 0.25 + 0.35 * pulse
+    }
   })
   return (
     <mesh
@@ -236,7 +245,7 @@ function CameraFit() {
   return null
 }
 
-function Tower({ zones, levels, selected, hovered, onHover, onSelect }: SceneProps) {
+function Tower({ zones, levels, selected, hovered, onHover, onSelect, alerts }: SceneProps) {
   const roofY = F3_Y + FLOOR_H * 5
   const find = (f: number, z: number) => zones.findIndex((v) => v.floor === f && v.zone === z)
   const wide = LENGTH + 1.4, deep = DEPTH + 1.4
@@ -257,7 +266,7 @@ function Tower({ zones, levels, selected, hovered, onHover, onSelect }: ScenePro
                 <ZoneBlock
                   key={z} pts={ZONE_SHAPES[z]} y={y} level={j >= 0 ? levels[j] ?? 0 : 0} active={j >= 0}
                   selected={j === selected && j >= 0} hovered={j === hovered && j >= 0}
-                  onHover={(on) => onHover(on ? j : null)} onSelect={() => onSelect(j)}
+                  onHover={(on) => onHover(on ? j : null)} onSelect={() => onSelect(j)} alert={j >= 0 && !!alerts?.[j]}
                 />
               )
             })}
@@ -331,6 +340,7 @@ function Site() {
 type SceneProps = {
   zones: Zone[]; levels: number[]; selected: number | null; hovered: number | null; daylight: number; sun: number; humidity: number; cloud: number
   onHover: (j: number | null) => void; onSelect: (j: number) => void; onDeselect?: () => void
+  alerts?: boolean[]          // Q2 alerts page: zones with an open alert, by zone index
 }
 
 // Opens looking at zones 4, 1 and 2, the view that shows the most AC. Drag to see the other sides.
