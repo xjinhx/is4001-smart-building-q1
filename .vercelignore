@@ -1,4 +1,5 @@
-# Only what the console reads at run time goes to Vercel. The built frontend (web/dist) stays in.
+# Only what the console needs goes to Vercel. web/src is uploaded so Vercel can
+# build web/dist itself (see buildCommand in vercel.json); a local dist is not uploaded.
 /20*Floor*.csv
 /IS4001_Q1_Haritha.zip
 /.claude/
@@ -8,7 +9,7 @@ __pycache__/
 .git/
 
 ml_startup/app/web/node_modules/
-ml_startup/app/web/src/
+ml_startup/app/web/dist/
 ml_startup/knime/
 ml_startup/work/shap_*.npz
 
