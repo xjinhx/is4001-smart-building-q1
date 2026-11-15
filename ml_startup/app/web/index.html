@@ -4,9 +4,32 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Chamchuri 5 restart console</title>
+    <style>
+      /* Shown before the app's own styles arrive, so the page is never a blank white screen */
+      html, body { margin: 0; height: 100%; background: #141415; color: #a1a1a6; }
+      .boot { height: 100%; display: grid; place-items: center; text-align: center; font: 14px/20px system-ui, sans-serif; padding: 0 16px; }
+    </style>
+    <script>
+      // If a script or stylesheet fails to load (for example while the server is waking up),
+      // reload by itself a few times instead of leaving a dead page.
+      addEventListener('error', function (e) {
+        var t = e.target
+        if (!t || (t.tagName !== 'SCRIPT' && t.tagName !== 'LINK')) return
+        var n = 0
+        try { n = Number(sessionStorage.getItem('boot-retries') || 0); sessionStorage.setItem('boot-retries', String(n + 1)) } catch (x) {}
+        var msg = document.getElementById('boot-msg')
+        if (n >= 5) {
+          try { sessionStorage.removeItem('boot-retries') } catch (x) {}   // a manual refresh starts over
+          if (msg) msg.textContent = 'The console could not load. Check your connection, then refresh the page.'
+          return
+        }
+        if (msg) msg.textContent = 'Waking up the server. Retrying…'
+        setTimeout(function () { location.reload() }, 3000)
+      }, true)
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><div class="boot"><p id="boot-msg">Loading the console…</p></div></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

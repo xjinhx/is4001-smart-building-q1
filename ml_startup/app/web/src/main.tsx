@@ -19,3 +19,5 @@ addEventListener('vite:preloadError', (e) => {
 })
 
 createRoot(document.getElementById('root')!).render(<App />)
+// Loaded fine, so the next failed load gets its full set of retries (see index.html)
+try { sessionStorage.removeItem('boot-retries') } catch { /* storage blocked */ }
