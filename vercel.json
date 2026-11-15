@@ -3,11 +3,17 @@
   "regions": [
     "sin1"
   ],
-  "buildCommand": "cd ml_startup/app/web && npm ci && npm run build && rm -rf ../../../public && cp -r dist ../../../public",
+  "buildCommand": "cd ml_startup/app/web && npm ci && npm run build",
   "functions": {
     "index.py": {
       "excludeFiles": "ml_startup/app/web/{node_modules,src}/**",
       "maxDuration": 60
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/index.html"
+    }
+  ]
 }

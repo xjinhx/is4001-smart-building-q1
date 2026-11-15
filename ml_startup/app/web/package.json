@@ -3,7 +3,8 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "scripts": { "dev": "vite", "build": "vite build", "typecheck": "tsc --noEmit" },
+  "scripts": { "dev": "vite", "build": "vite build",
+    "build:public": "vite build && node -e \"const fs=require('fs');fs.rmSync('../../../public',{recursive:true,force:true});fs.cpSync('dist','../../../public',{recursive:true})\"", "typecheck": "tsc --noEmit" },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "5.1.0",
     "@fontsource/ibm-plex-sans": "5.1.0",
