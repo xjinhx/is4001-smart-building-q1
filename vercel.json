@@ -1,7 +1,9 @@
 {
   "framework": "fastapi",
-  "regions": ["sin1"],
-  "buildCommand": "cd ml_startup/app/web && npm ci && npm run build",
+  "regions": [
+    "sin1"
+  ],
+  "buildCommand": "cd ml_startup/app/web && npm ci && npm run build && rm -rf ../../../public && cp -r dist ../../../public",
   "functions": {
     "index.py": {
       "excludeFiles": "ml_startup/app/web/{node_modules,src}/**",
