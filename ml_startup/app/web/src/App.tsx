@@ -27,6 +27,8 @@ export default function App() {
   const seq = useRef(0)
   const [focus, setFocus] = useState<Focus | null>(null)
   const toReplay = useCallback((f: Focus) => { setFocus(f); location.hash = '#/alerts' }, [])
+  // Last page visited in each question, so switching back returns there
+  const lastPage = useRef<Record<'q1' | 'q2', Page>>({ q1: 'replay', q2: 'alerts' })
 
   useEffect(() => {
     const on = () => setPage(pageFromHash())
@@ -80,6 +82,8 @@ export default function App() {
   const named = init.schedules.find((s) => s.id === scheduleId)
   const label = named?.label ?? (scheduleId === 'Suggested' ? 'Suggested for this day' : 'Edited by hand')
   const q2 = Q2_PAGES.includes(page)
+  lastPage.current[q2 ? 'q2' : 'q1'] = page
+  const showQuestion = (q: 'q1' | 'q2') => { location.hash = `#/${lastPage.current[q]}` }
 
   return (
     <div className="shell">
@@ -88,8 +92,12 @@ export default function App() {
           <h1>Chamchuri 5 restart console</h1>
           <span>{q2 ? 'AC alerts from recorded 2019 data' : 'Simulated from recorded 2018 data'}</span>
         </div>
+        <div className="seg question" role="group" aria-label="Question">
+          <button className={q2 ? '' : 'on'} aria-pressed={!q2} onClick={() => showQuestion('q1')}>Q1 Restart</button>
+          <button className={q2 ? 'on' : ''} aria-pressed={q2} onClick={() => showQuestion('q2')}>Q2 Alerts</button>
+        </div>
         <nav aria-label="Pages">
-          {PAGES.map(([k, name]) => <a key={k} href={`#/${k}`} className={page === k ? 'on' : ''} aria-current={page === k ? 'page' : undefined}>{name}</a>)}
+          {PAGES.filter(([k]) => Q2_PAGES.includes(k) === q2).map(([k, name]) => <a key={k} href={`#/${k}`} className={page === k ? 'on' : ''} aria-current={page === k ? 'page' : undefined}>{name}</a>)}
         </nav>
         <div className="controls">
           {page !== 'yearly' && page !== 'schedules' && page !== 'adaptive' && !q2 && (
