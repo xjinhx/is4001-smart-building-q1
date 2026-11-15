@@ -13,6 +13,9 @@ export default function Chart({ r, minute, onSeek, from, to }: {
   const [hover, setHover] = useState<number | null>(null)
   useEffect(() => {
     if (!box.current) return
+    // Measure once now, so the chart fits even before the first resize callback
+    const r0 = box.current.getBoundingClientRect()
+    if (r0.width) setSize({ w: r0.width, h: r0.height })
     const ro = new ResizeObserver(([e]) => setSize({ w: e.contentRect.width, h: e.contentRect.height }))
     ro.observe(box.current)
     return () => ro.disconnect()

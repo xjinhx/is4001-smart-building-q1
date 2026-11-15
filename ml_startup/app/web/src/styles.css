@@ -41,7 +41,7 @@ select { height: 36px; background: var(--raised); border: 1px solid var(--line);
 .body { min-height: 0; min-width: 0; overflow: hidden; }
 .page { height: 100%; min-width: 0; }
 
-.seg { display: inline-flex; background: var(--raised); border-radius: 8px; padding: 2px; border: 1px solid var(--line); flex: none; }
+.seg { display: inline-flex; flex-wrap: wrap; max-width: 100%; background: var(--raised); border-radius: 8px; padding: 2px; border: 1px solid var(--line); flex: none; }
 .seg button { height: 28px; padding: 0 12px; border-radius: 6px; color: var(--text-2); font-size: 13px; white-space: nowrap; transition: background-color 150ms var(--ease), color 150ms var(--ease); }
 .seg button:hover { color: var(--text); }
 .seg button.on { background: var(--text); color: #141415; }
@@ -121,10 +121,10 @@ button.cell:hover { border-color: var(--line-2); }
 .pt { cursor: pointer; }
 .pt-label { fill: var(--text-2); font-size: 12px; }
 .pt-label.on { fill: var(--text); font-weight: 500; }
-.table-wrap { padding: 8px; overflow-x: auto; }
+.table-wrap { padding: 8px; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
-th { text-align: left; font-weight: 400; color: var(--text-3); padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: bottom; }
-td { padding: 8px 12px; height: 40px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+th { text-align: left; font-weight: 400; color: var(--text-3); padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: bottom; overflow-wrap: break-word; }
+td { padding: 8px 12px; height: 40px; overflow-wrap: break-word; font-variant-numeric: tabular-nums; }
 th.n, td.n { text-align: right; }
 tbody tr { cursor: pointer; transition: background-color 150ms var(--ease); }
 tbody tr:hover { background: var(--raised); }
@@ -188,7 +188,7 @@ tbody tr.static:hover { background: none; }
 .caveats li { display: flex; gap: 8px; }
 .caveats svg { flex: none; color: var(--text-3); margin-top: 2px; }
 
-@media (max-width: 1240px) {
+@media (max-width: 1320px) {
   .brand span { display: none; }
   .top { gap: 12px; padding: 0 16px; }
   nav a { padding: 0 8px; }
@@ -296,10 +296,10 @@ tbody tr.static:hover { background: none; }
 .q2-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .q2-filters .seg button { height: 30px; }
 .q2-count { opacity: .7; margin-left: 4px; }
-.q2-sort { color: inherit; font: inherit; white-space: nowrap; }
+.q2-sort { color: inherit; font: inherit; }
 .q2-sort:hover { color: var(--text); }
 .q2-table-panel { padding: 0; }
-.q2-table-panel td button.ghost { white-space: nowrap; }
+.q2-table-panel td button.ghost { text-align: left; }
 .q2-pager { display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 8px 12px; border-top: 1px solid var(--line); font-size: 13px; }
 .q2-stats { border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
 .q2-unit { font-size: 14px; font-weight: 400; color: var(--text-2); }
@@ -330,4 +330,18 @@ tbody tr.static:hover { background: none; }
   .q2-list-panel { display: none; }
   .q2-alerts .plans { padding: 232px 16px 132px; }
   .q2-zone-card { right: 16px; }
+}
+
+/* No sideways scrolling anywhere: tables squeeze and wrap on narrow screens */
+html, body, .doc { overflow-x: hidden; }
+@media (max-width: 1100px) {
+  table { font-size: 12px; }
+  th, td { padding: 6px 4px; overflow-wrap: anywhere; }
+  .table-wrap { padding: 4px; }
+}
+@media (max-width: 640px) {
+  nav { flex-wrap: wrap; height: auto; }
+  nav a { padding: 8px; }
+  .player { flex-wrap: wrap; }
+  .stat-value, .stat-label, .stat-note { white-space: normal; }
 }

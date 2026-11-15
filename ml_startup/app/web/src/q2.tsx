@@ -267,6 +267,9 @@ function Timeline({ cases, date, minute, policy, onSeek, onOpen }: {
   const [w, setW] = useState(800)
   useEffect(() => {
     if (!box.current) return
+    // Measure once now, so the timeline fits even before the first resize callback
+    const w0 = box.current.getBoundingClientRect().width
+    if (w0) setW(w0)
     const ro = new ResizeObserver(([e]) => setW(e.contentRect.width))
     ro.observe(box.current)
     return () => ro.disconnect()
