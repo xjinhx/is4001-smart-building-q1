@@ -9,6 +9,21 @@ const PAGES = [['replay', 'Replay'], ['schedules', 'Schedules'], ['whatif', 'Wha
 // Q2 pages: real 2019 AC alerts, with their own day and policy controls
 const Q2_PAGES: readonly string[] = ['alerts', 'alertlist', 'workload']
 type Page = (typeof PAGES)[number][0]
+// The hosted backend sleeps when idle, and its first request can be slow or fail, so retry a few times
+const withRetry = async <T,>(f: () => Promise<T>, tries = 12): Promise<T> => {
+  try {
+    return await f()
+  } catch (e) {
+    if (tries <= 0) throw e
+    await new Promise((ok) => setTimeout(ok, 5000))
+    return withRetry(f, tries - 1)
+  }
+}
+const getInit = async (): Promise<Init> => {
+  const res = await fetch('/api/init')
+  if (!res.ok) throw new Error(`The backend returned ${res.status}`)
+  return res.json()
+}
 const pageFromHash = (): Page => {
   const h = location.hash.replace('#/', '')
   return (PAGES.find(([k]) => k === h)?.[0]) ?? 'replay'
@@ -36,19 +51,26 @@ export default function App() {
     return () => removeEventListener('hashchange', on)
   }, [])
 
+  // After a few seconds of loading, explain that the server is waking up
+  const [slow, setSlow] = useState(false)
   useEffect(() => {
-    fetch('/api/init').then((x) => x.json()).then((i: Init) => {
+    const t = setTimeout(() => setSlow(true), 4000)
+    return () => clearTimeout(t)
+  }, [])
+
+  useEffect(() => {
+    withRetry(getInit).then((i) => {
       setInit(i)
       setDate(i.default_date)
       setOffsets(i.schedules.find((s) => s.id === 'Recommended')!.offsets)
-    }).catch(() => setError('Start the backend first: python app/api.py'))
+    }).catch(() => setError('The server did not respond. Refresh the page to try again'))
   }, [])
 
   useEffect(() => {
     if (!date || !offsets.length) return
     const id = ++seq.current
     const t = setTimeout(() => {
-      post<Result>('/api/simulate', { date, offsets, conditions: cond })
+      withRetry(() => post<Result>('/api/simulate', { date, offsets, conditions: cond }), r ? 0 : 12)
         .then((res) => { if (id === seq.current) { setR(res); setError('') } })
         .catch((e) => { if (id === seq.current) setError(e.message) })
     }, 60)
@@ -75,7 +97,11 @@ export default function App() {
   }
 
   if (error && !r) return <div className="splash">{error}</div>
-  if (!init || !r) return <div className="splash">Loading the 2018 replay</div>
+  if (!init || !r) return (
+    <div className="splash">
+      {slow ? 'Waking up the server. After a quiet spell the first load can take up to a minute' : 'Loading the 2018 replay'}
+    </div>
+  )
 
   const day = init.days.find((d) => d.date === date)!
   const whatIf = cond.outdoor_delta_C !== 0 || cond.indoor_delta_C !== 0 || cond.load_delta_pct !== 0

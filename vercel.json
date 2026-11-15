@@ -4,7 +4,8 @@
   "buildCommand": "cd ml_startup/app/web && npm ci && npm run build",
   "functions": {
     "index.py": {
-      "excludeFiles": "ml_startup/app/web/{node_modules,src}/**"
+      "excludeFiles": "ml_startup/app/web/{node_modules,src}/**",
+      "maxDuration": 60
     }
   }
 }
